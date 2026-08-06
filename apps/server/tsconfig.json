@@ -1,0 +1,8 @@
+{
+  "extends": "@repo/typescript-config/bun-server.json",
+
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": ["node_modules", "dist"]
+}

@@ -1,0 +1,23 @@
+{
+  "name": "@repo/server",
+  "version": "0.0.0",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "bun run --watch src/index.ts",
+    "build": "bun build src/index.ts --target=bun --outdir=dist",
+    "start": "bun run dist/index.js",
+    "lint": "eslint .",
+    "check-types": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@repo/eslint-config": "*",
+    "@repo/typescript-config": "*",
+    "@types/bun": "latest",
+    "eslint": "^9.39.1"
+  },
+  "dependencies": {
+    "hono": "^4.13.0"
+  }
+}
