@@ -1,13 +1,20 @@
 import { Hono } from "hono";
-import { bucketName, getPresignedPutUrl, verifyObjectExists } from "../lib/s3";
+import { getPresignedPutUrl, verifyObjectExists } from "../lib/s3";
 import { z } from "zod";
-import { zValidator } from "@hono/zod-validator";
+import { validateJson } from "../lib/validator";
+import { sendError, sendSuccess } from "../lib/apiResponse";
 
 export const uploadRouter = new Hono()
 
+const ALLOWED_FILE_TYPES = [
+  'application/pdf',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/msword',
+] as const
+
 const presignedUrlSchema = z.object({
   fileName: z.string().min(1, 'File name is required'),
-  fileType: z.string().min(1, 'File type is required'),
+  fileType: z.enum(ALLOWED_FILE_TYPES, { error: 'Invalid file type. Only PDF (.pdf) and Word documents (.docx, .doc) are allowed' }),
   fileSize: z.number().refine((val) => val > 0 && val <= 10 * 1024 * 1024, 'File size must be greater than 0 and less than 10MB'),
 })
 
@@ -23,7 +30,7 @@ const completeUploadSchema = z.object({
     .optional(),
 })
 
-uploadRouter.post("/presigned-url", zValidator('json', presignedUrlSchema), async(c) => {
+uploadRouter.post("/presigned-url", validateJson(presignedUrlSchema), async(c) => {
     const body = c.req.valid('json')
 
     const fileId = crypto.randomUUID()
@@ -32,30 +39,46 @@ uploadRouter.post("/presigned-url", zValidator('json', presignedUrlSchema), asyn
 
     const presignedUrl = await getPresignedPutUrl(objectKey, body.fileType)
 
-    return c.json({
-        message: "Presigned url generated successfully",
-        success: true,
-        data: {
+    return sendSuccess({
+        c, 
+        data: {   
             fileId,
             objectKey,
             presignedUrl
-        }
-    }, 200)
+        },
+        message: "Presigned url generated successfully",
+        statusCode: 200
+    })
 })
 
-uploadRouter.post('/complete', zValidator('json', completeUploadSchema), async (c) => {
+uploadRouter.post('/complete', validateJson(completeUploadSchema), async (c) => {
     const body = c.req.valid('json')
 
     try{
         const exists = await verifyObjectExists(body.objectKey)
         if(!exists){
-            return c.json({ error: 'File not found in storage' }, 404)        
+            return sendError({
+                c,
+                message: 'File not found in storage',
+                statusCode: 404
+            })        
         }
     } catch(error) {
         console.error(`Error while verifying upload`, error)
-        return c.json({ error: 'Internal Server Error' }, 500)        
+        return sendError({
+            c,
+            message: 'Internal Server Error',
+            statusCode: 500
+        })        
     }
 
     console.log(`Upload completed: ${body.objectKey} for candidate ${body.metadata?.candidateName || 'unknown'}`)
-    return c.json({ success: true, message: 'Upload completed successfully' }, 200)
+    return sendSuccess({
+        c,
+        data: {
+            fileId: body.fileId
+        },
+        message: 'Upload completed successfully',
+        statusCode: 200
+    })
 })
