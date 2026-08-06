@@ -1,9 +1,10 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 
+const PORT = process.env.PORT || 8000
+
 const app = new Hono()
 
-// Enable CORS for cross-origin requests from frontend (Next.js port 3000)
 app.use('*', cors())
 
 app.get('/', (c) => {
@@ -19,6 +20,6 @@ app.get('/api/health', (c) => {
 })
 
 export default {
-  port: 3001,
+  port: PORT,
   fetch: app.fetch,
 }

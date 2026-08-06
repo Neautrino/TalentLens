@@ -14,12 +14,12 @@ export default function Home() {
   return (
     <div className="min-h-screen w-full bg-slate-950 text-slate-100 flex flex-col items-center justify-between p-6 sm:p-12 relative overflow-hidden font-sans">
       {/* Glow Effects */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-gradient-to-tr from-blue-600/20 via-indigo-600/15 to-violet-600/20 blur-[120px] rounded-full pointer-events-none" />
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-175 h-175 bg-linear-to-tr from-blue-600/20 via-indigo-600/15 to-violet-600/20 blur-[120px] rounded-full pointer-events-none" />
 
       {/* Navigation Header */}
       <header className="relative z-10 w-full max-w-5xl flex items-center justify-between py-4 border-b border-slate-800/80">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-indigo-500/20">
+          <div className="w-9 h-9 rounded-xl bg-linear-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-indigo-500/20">
             T
           </div>
           <span className="font-bold text-xl tracking-tight text-white">
@@ -74,9 +74,9 @@ export default function Home() {
         </div>
 
         {/* Hero Title */}
-        <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-white via-slate-100 to-slate-400 mb-6 max-w-3xl leading-tight">
+        <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-transparent bg-clip-text bg-linear-to-b from-white via-slate-100 to-slate-400 mb-6 max-w-3xl leading-tight">
           Next-Generation Talent Intelligence <br />
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-400 to-violet-400">
+          <span className="text-transparent bg-clip-text bg-linear-to-r from-blue-400 via-indigo-400 to-violet-400">
             Powered by Monorepo Architecture
           </span>
         </h1>
