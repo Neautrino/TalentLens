@@ -1,23 +1,18 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
+import { healthRouter } from './routes/health'
+import { logger } from 'hono/logger'
 
 const PORT = process.env.PORT || 8000
 
 const app = new Hono()
 
-app.use('*', cors())
+app.use(cors({
+    origin: '*'
+}))
+app.use(logger())
 
-app.get('/', (c) => {
-  return c.text('TalentLens Bun + Hono API Server is active!')
-})
-
-app.get('/api/health', (c) => {
-  return c.json({
-    status: 'ok',
-    service: 'talentlens-server',
-    timestamp: new Date().toISOString(),
-  })
-})
+app.route('api/health', healthRouter)
 
 export default {
   port: PORT,
