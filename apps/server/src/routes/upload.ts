@@ -3,7 +3,7 @@ import { getPresignedPutUrl, verifyObjectExists } from "../lib/s3";
 import { z } from "zod";
 import { validateJson } from "../lib/validator";
 import { sendError, sendSuccess } from "../lib/apiResponse";
-
+import { FileRecord, getFileRecord, setActiveJobRecord, setFileRecord } from "../store/store";
 export const uploadRouter = new Hono()
 
 const ALLOWED_FILE_TYPES = [
@@ -13,12 +13,15 @@ const ALLOWED_FILE_TYPES = [
 ] as const
 
 const presignedUrlSchema = z.object({
+  userId: z.string().min(1, 'User ID is required'),
   fileName: z.string().min(1, 'File name is required'),
+  jobDescription: z.string().optional(),
   fileType: z.enum(ALLOWED_FILE_TYPES, { error: 'Invalid file type. Only PDF (.pdf) and Word documents (.docx, .doc) are allowed' }),
   fileSize: z.number().refine((val) => val > 0 && val <= 10 * 1024 * 1024, 'File size must be greater than 0 and less than 10MB'),
 })
 
 const completeUploadSchema = z.object({
+  userId: z.string().min(1, 'User ID is required'),
   fileId: z.uuid('Invalid file ID format'),
   objectKey: z.string().min(1, 'Object key is required'),
   metadata: z
@@ -38,6 +41,23 @@ uploadRouter.post("/presigned-url", validateJson(presignedUrlSchema), async(c) =
     const objectKey = `uploads/${fileId}-${sanitizedFileName}`
 
     const presignedUrl = await getPresignedPutUrl(objectKey, body.fileType)
+
+    const record:FileRecord = {
+        fileId,
+        userId: body.userId,
+        objectKey,
+        fileName: body.fileName,
+        fileType: body.fileType,
+        fileSize: body.fileSize,
+        uploadedAt: new Date().toISOString(),
+        status: 'pending'
+    }
+
+    setFileRecord(record)
+
+    if(body.jobDescription){
+        setActiveJobRecord(body.userId, body.jobDescription)
+    }
 
     return sendSuccess({
         c, 
@@ -71,6 +91,18 @@ uploadRouter.post('/complete', validateJson(completeUploadSchema), async (c) => 
             statusCode: 500
         })        
     }
+
+    const record = getFileRecord(body.fileId)
+    if (!record) {
+      return sendError({
+        c,
+        message: 'Upload record not found',
+        statusCode: 404
+      })
+    }
+
+    record.status = 'completed'
+    setFileRecord(record)
 
     console.log(`Upload completed: ${body.objectKey} for candidate ${body.metadata?.candidateName || 'unknown'}`)
     return sendSuccess({
