@@ -1,226 +1,183 @@
 'use client'
 
-import { Button } from '@repo/ui/button'
-import { Card } from '@repo/ui/card'
 import { useState } from 'react'
+import { Card } from '@repo/ui/card'
+import { Button } from '@repo/ui/button'
+import { ResumeDropzone } from '../components/ResumeDropzone'
 import { useServerHealth } from '../hooks/useServerHealth'
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<'overview' | 'api' | 'tech'>('overview')
+  const [activeTab, setActiveTab] = useState<'upload' | 'features' | 'status'>('upload')
 
-  // Clean custom TanStack Query hook calling Bun + Hono API
-  const { data: apiStatus, isLoading, isError, isFetching, refetch } = useServerHealth()
+  // Live polling check for Bun + Hono API server
+  const { data: apiStatus, isLoading: isApiLoading, isError: isApiError, refetch } = useServerHealth()
 
   return (
-    <div className="min-h-screen w-full bg-slate-950 text-slate-100 flex flex-col items-center justify-between p-6 sm:p-12 relative overflow-hidden font-sans">
-      {/* Glow Effects */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-175 h-175 bg-linear-to-tr from-blue-600/20 via-indigo-600/15 to-violet-600/20 blur-[120px] rounded-full pointer-events-none" />
+    <div className="min-h-screen w-full bg-slate-50 text-slate-900 flex flex-col justify-between relative overflow-hidden font-sans">
+      {/* Light Mode Grid Background */}
+      <div className="absolute inset-0 bg-grid-light opacity-80 pointer-events-none" />
 
-      {/* Navigation Header */}
-      <header className="relative z-10 w-full max-w-5xl flex items-center justify-between py-4 border-b border-slate-800/80">
+      {/* Modern Animated Gradient Mesh Blobs */}
+      <div className="absolute top-[-100px] left-1/2 -translate-x-1/2 w-[900px] h-[500px] bg-gradient-to-tr from-indigo-200/50 via-purple-100/40 to-blue-200/50 blur-3xl pointer-events-none rounded-full mask-spotlight animate-float" />
+      <div className="absolute bottom-[-150px] left-[-100px] w-[600px] h-[600px] bg-gradient-to-tr from-blue-200/30 via-indigo-100/30 to-slate-200/30 blur-3xl pointer-events-none rounded-full animate-float-delayed" />
+      <div className="absolute top-[20%] right-[-150px] w-[500px] h-[500px] bg-gradient-to-bl from-violet-200/40 via-indigo-100/30 to-transparent blur-3xl pointer-events-none rounded-full animate-float" />
+
+      {/* Top Navigation Bar */}
+      <header className="relative z-10 w-full max-w-6xl mx-auto px-6 py-5 flex items-center justify-between border-b border-slate-200/80 bg-white/70 backdrop-blur-md">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-linear-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-indigo-500/20">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-600 flex items-center justify-center text-white font-black text-lg shadow-sm shadow-indigo-600/30">
             T
           </div>
-          <span className="font-bold text-xl tracking-tight text-white">
-            Talent<span className="text-indigo-400">Lens</span>
+          <span className="font-bold text-xl tracking-tight text-slate-900">
+            Talent<span className="text-indigo-600">Lens</span>
           </span>
         </div>
 
-        {/* Tab Selector */}
-        <div className="flex items-center gap-1.5 bg-slate-900/90 border border-slate-800 p-1.5 rounded-xl shadow-inner">
+        {/* Tab Switcher */}
+        <div className="flex items-center gap-1 bg-slate-100/80 p-1 rounded-2xl border border-slate-200/80 shadow-2xs">
           <button
-            onClick={() => setActiveTab('overview')}
-            className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-              activeTab === 'overview'
-                ? 'bg-indigo-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+            onClick={() => setActiveTab('upload')}
+            className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeTab === 'upload'
+                ? 'bg-white text-indigo-600 shadow-xs'
+                : 'text-slate-500 hover:text-slate-900'
             }`}
           >
-            Overview
+            Scan Resume
           </button>
           <button
-            onClick={() => setActiveTab('api')}
-            className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-              activeTab === 'api'
-                ? 'bg-indigo-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+            onClick={() => setActiveTab('features')}
+            className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeTab === 'features'
+                ? 'bg-white text-indigo-600 shadow-xs'
+                : 'text-slate-500 hover:text-slate-900'
             }`}
           >
-            API Live Status
+            Architecture
           </button>
           <button
-            onClick={() => setActiveTab('tech')}
-            className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-              activeTab === 'tech'
-                ? 'bg-indigo-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+            onClick={() => setActiveTab('status')}
+            className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeTab === 'status'
+                ? 'bg-white text-indigo-600 shadow-xs'
+                : 'text-slate-500 hover:text-slate-900'
             }`}
           >
-            Tech Stack
+            System Status
           </button>
         </div>
       </header>
 
       {/* Main Content Area */}
-      <main className="relative z-10 w-full max-w-5xl my-auto py-12 flex flex-col items-center text-center">
-        {/* Top Status Pill */}
-        <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-slate-900/90 border border-slate-800 text-slate-300 text-xs font-medium mb-8 shadow-inner">
-          <span className="relative flex h-2.5 w-2.5">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
+      <main className="relative z-10 w-full max-w-5xl mx-auto px-6 py-12 flex-1 flex flex-col items-center justify-center">
+        {/* Top Live Server Badge */}
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/90 border border-slate-200/90 text-slate-600 text-xs font-semibold mb-6 shadow-xs backdrop-blur-md">
+          <span className="relative flex h-2 w-2">
+            <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${isApiError ? 'bg-rose-400' : 'bg-emerald-400'} opacity-75`} />
+            <span className={`relative inline-flex rounded-full h-2 w-2 ${isApiError ? 'bg-rose-500' : 'bg-emerald-500'}`} />
           </span>
-          Turborepo Monorepo • Next.js 16 • Bun + Hono • TanStack Query
+          {isApiLoading ? (
+            'Connecting to Bun Server...'
+          ) : isApiError ? (
+            'Server Offline (Port 8000)'
+          ) : (
+            `Connected to ${apiStatus?.service || 'Bun Server'}`
+          )}
         </div>
 
-        {/* Hero Title */}
-        <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-transparent bg-clip-text bg-linear-to-b from-white via-slate-100 to-slate-400 mb-6 max-w-3xl leading-tight">
-          Next-Generation Talent Intelligence <br />
-          <span className="text-transparent bg-clip-text bg-linear-to-r from-blue-400 via-indigo-400 to-violet-400">
-            Powered by Monorepo Architecture
-          </span>
-        </h1>
-
-        {/* Subtitle */}
-        <p className="text-slate-400 text-base sm:text-lg max-w-2xl mb-10 leading-relaxed">
-          High-performance fullstack architecture integrating shared type-safe packages, real-time query caching, and ultra-fast Bun server APIs.
-        </p>
-
-        {/* Action Controls */}
-        <div className="flex flex-wrap items-center justify-center gap-4 mb-14">
-          <Button variant="primary" size="lg" onClick={() => refetch()}>
-            {isFetching ? 'Refreshing Server...' : 'Check Server Status'}
-          </Button>
-          <Button
-            variant="outline"
-            size="lg"
-            onClick={() => window.open('https://turborepo.dev', '_blank')}
-          >
-            Turborepo Docs →
-          </Button>
+        {/* Hero Section Title */}
+        <div className="text-center max-w-3xl mb-10">
+          <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900 mb-4 leading-tight">
+            Intelligent Candidate Management <br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-indigo-500 to-violet-600">
+              & Resume Ingestion
+            </span>
+          </h1>
+          <p className="text-slate-500 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
+            Upload candidate resumes directly to MinIO Object Storage via S3 Presigned URLs, verified instantaneously by Hono API backend.
+          </p>
         </div>
 
-        {/* Tab 1: OVERVIEW */}
-        {activeTab === 'overview' && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full text-left transition-all duration-300">
+        {/* Dynamic Tab Views */}
+        {activeTab === 'upload' && (
+          <div className="w-full flex justify-center">
+            <ResumeDropzone />
+          </div>
+        )}
+
+        {activeTab === 'features' && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full text-left">
             <Card
-              title="Next.js 16 App Router"
-              description="Built with React 19, Server Components, and client-side TanStack Query Provider."
+              title="Presigned S3 Direct Upload"
+              description="Zero server memory overhead. Frontend streams binaries directly to MinIO bucket via S3 presigned URLs."
               icon={
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                 </svg>
               }
             />
 
             <Card
-              title="Bun + Hono Backend"
-              description="Ultra-fast TypeScript API server running on port 3001 with CORS middleware."
+              title="Verification & Metadata API"
+              description="Post-upload verification API checks file presence in storage and records candidate form metadata."
               icon={
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M12 5l7 7-7 7" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               }
-            >
-              <div className="mt-3 pt-3 border-t border-slate-800/60 flex items-center justify-between text-xs">
-                <span className="text-slate-500">API Health:</span>
-                {isLoading ? (
-                  <span className="text-amber-400 font-mono">Fetching...</span>
-                ) : isError ? (
-                  <span className="text-rose-400 font-mono">Server Offline (Port 3001)</span>
-                ) : (
-                  <span className="text-emerald-400 font-mono font-bold">
-                    {apiStatus?.service || 'Online'}
-                  </span>
-                )}
-              </div>
-            </Card>
+            />
 
             <Card
-              title="Shared @repo Packages"
-              description="Modular UI components, TypeScript bases, and ESLint configurations across all apps."
+              title="Zod Schema Validation"
+              description="Strict MIME type checking (.pdf, .docx) and file size limits (max 10MB) enforced before upload."
               icon={
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
               }
             />
           </div>
         )}
 
-        {/* Tab 2: API LIVE STATUS */}
-        {activeTab === 'api' && (
-          <div className="w-full max-w-2xl bg-slate-900/80 border border-slate-800 rounded-2xl p-6 text-left shadow-2xl">
-            <div className="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
-              <span className="text-sm font-semibold text-slate-200">
-                Bun + Hono API Monitor (Port 3001)
-              </span>
-              <span className="text-xs font-mono px-2 py-1 rounded bg-slate-800 text-slate-400">
-                GET /api/health
-              </span>
+        {activeTab === 'status' && (
+          <div className="w-full max-w-xl bg-white/90 backdrop-blur-md border border-slate-200 rounded-3xl p-7 shadow-sm text-left">
+            <div className="flex items-center justify-between pb-3.5 border-b border-slate-100 mb-4">
+              <span className="text-sm font-bold text-slate-800">API Health Diagnostics</span>
+              <Button variant="ghost" size="sm" onClick={() => refetch()}>
+                Re-check API
+              </Button>
             </div>
 
-            {isLoading ? (
-              <div className="p-8 text-center text-slate-400 text-sm animate-pulse">
-                Connecting to API server...
+            <div className="space-y-3 text-xs font-mono">
+              <div className="flex justify-between p-3 rounded-xl bg-slate-50 border border-slate-100">
+                <span className="text-slate-500">Service:</span>
+                <span className="text-indigo-600 font-bold">{apiStatus?.service || 'N/A'}</span>
               </div>
-            ) : isError ? (
-              <div className="p-6 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-sm">
-                ⚠️ Could not connect to API server at <code className="font-mono text-xs">http://localhost:3001</code>.
-                Make sure to run <code className="font-mono text-xs">bun run dev</code>!
+              <div className="flex justify-between p-3 rounded-lg bg-slate-50 border border-slate-100">
+                <span className="text-slate-500">Status:</span>
+                <span className="text-emerald-600 font-bold">{apiStatus?.status || 'N/A'}</span>
               </div>
-            ) : (
-              <div className="space-y-3 font-mono text-xs bg-slate-950/80 p-4 rounded-xl border border-slate-800/80">
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Service:</span>
-                  <span className="text-emerald-400 font-bold">{apiStatus?.service}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Status:</span>
-                  <span className="text-emerald-400">{apiStatus?.status}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Timestamp:</span>
-                  <span className="text-slate-300">{apiStatus?.timestamp}</span>
-                </div>
+              <div className="flex justify-between p-3 rounded-lg bg-slate-50 border border-slate-100">
+                <span className="text-slate-500">Timestamp:</span>
+                <span className="text-slate-700">{apiStatus?.timestamp || 'N/A'}</span>
               </div>
-            )}
-          </div>
-        )}
-
-        {/* Tab 3: TECH STACK */}
-        {activeTab === 'tech' && (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 w-full text-left">
-            {[
-              { name: 'Next.js 16', role: 'Frontend App', color: 'border-blue-500/30' },
-              { name: 'Bun 1.3', role: 'Runtime & PM', color: 'border-amber-500/30' },
-              { name: 'Hono 4', role: 'API Server', color: 'border-orange-500/30' },
-              { name: 'Tailwind v4', role: 'PostCSS Styling', color: 'border-cyan-500/30' },
-              { name: 'TanStack Query', role: 'Async State', color: 'border-rose-500/30' },
-              { name: 'Turborepo', role: 'Build System', color: 'border-indigo-500/30' },
-              { name: 'TypeScript 5', role: 'Shared Rules', color: 'border-blue-400/30' },
-              { name: 'ESLint 9', role: 'Shared Flat Config', color: 'border-violet-500/30' },
-            ].map((tech) => (
-              <div
-                key={tech.name}
-                className={`p-4 rounded-xl bg-slate-900/60 border ${tech.color} flex flex-col justify-between`}
-              >
-                <div className="font-bold text-white text-base">{tech.name}</div>
-                <div className="text-slate-400 text-xs mt-1">{tech.role}</div>
+              <div className="flex justify-between p-3 rounded-lg bg-slate-50 border border-slate-100">
+                <span className="text-slate-500">API Base:</span>
+                <span className="text-slate-700">http://localhost:8000</span>
               </div>
-            ))}
+            </div>
           </div>
         )}
       </main>
 
       {/* Footer */}
-      <footer className="relative z-10 w-full max-w-5xl py-6 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500">
-        <div>TalentLens Monorepo Architecture © 2026</div>
-        <div className="flex items-center gap-6 mt-3 sm:mt-0">
-          <a href="https://nextjs.org" target="_blank" rel="noreferrer" className="hover:text-slate-300 transition-colors">Next.js</a>
-          <a href="https://hono.dev" target="_blank" rel="noreferrer" className="hover:text-slate-300 transition-colors">Hono</a>
-          <a href="https://tailwindcss.com" target="_blank" rel="noreferrer" className="hover:text-slate-300 transition-colors">Tailwind CSS</a>
-          <a href="https://tanstack.com" target="_blank" rel="noreferrer" className="hover:text-slate-300 transition-colors">TanStack Query</a>
+      <footer className="relative z-10 w-full max-w-6xl mx-auto px-6 py-6 border-t border-slate-200/80 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500">
+        <div>TalentLens Platform © 2026 • Turborepo & Bun Architecture</div>
+        <div className="flex items-center gap-6 mt-3 sm:mt-0 font-medium">
+          <a href="https://nextjs.org" target="_blank" rel="noreferrer" className="hover:text-slate-900 transition-colors">Next.js</a>
+          <a href="https://hono.dev" target="_blank" rel="noreferrer" className="hover:text-slate-900 transition-colors">Hono</a>
+          <a href="https://min.io" target="_blank" rel="noreferrer" className="hover:text-slate-900 transition-colors">MinIO</a>
+          <a href="https://tailwindcss.com" target="_blank" rel="noreferrer" className="hover:text-slate-900 transition-colors">Tailwind CSS</a>
         </div>
       </footer>
     </div>
