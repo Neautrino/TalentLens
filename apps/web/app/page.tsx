@@ -9,7 +9,6 @@ import { useServerHealth } from '../hooks/useServerHealth'
 export default function Home() {
   const [activeTab, setActiveTab] = useState<'upload' | 'features' | 'status'>('upload')
 
-  // Live polling check for Bun + Hono API server
   const { data: apiStatus, isLoading: isApiLoading, isError: isApiError, refetch } = useServerHealth()
 
   return (
@@ -18,14 +17,14 @@ export default function Home() {
       <div className="absolute inset-0 bg-grid-light opacity-80 pointer-events-none" />
 
       {/* Modern Animated Gradient Mesh Blobs */}
-      <div className="absolute top-[-100px] left-1/2 -translate-x-1/2 w-[900px] h-[500px] bg-gradient-to-tr from-indigo-200/50 via-purple-100/40 to-blue-200/50 blur-3xl pointer-events-none rounded-full mask-spotlight animate-float" />
-      <div className="absolute bottom-[-150px] left-[-100px] w-[600px] h-[600px] bg-gradient-to-tr from-blue-200/30 via-indigo-100/30 to-slate-200/30 blur-3xl pointer-events-none rounded-full animate-float-delayed" />
-      <div className="absolute top-[20%] right-[-150px] w-[500px] h-[500px] bg-gradient-to-bl from-violet-200/40 via-indigo-100/30 to-transparent blur-3xl pointer-events-none rounded-full animate-float" />
+      <div className="absolute -top-25 left-1/2 -translate-x-1/2 w-225 h-125 bg-linear-to-tr from-indigo-200/50 via-purple-100/40 to-blue-200/50 blur-3xl pointer-events-none rounded-full mask-spotlight animate-float" />
+      <div className="absolute -bottom-37.5 -left-25 w-150 h-150 bg-linear-to-tr from-blue-200/30 via-indigo-100/30 to-slate-200/30 blur-3xl pointer-events-none rounded-full animate-float-delayed" />
+      <div className="absolute top-[20%] -right-37.5 w-125 h-125 bg-linear-to-bl from-violet-200/40 via-indigo-100/30 to-transparent blur-3xl pointer-events-none rounded-full animate-float" />
 
       {/* Top Navigation Bar */}
       <header className="relative z-10 w-full max-w-6xl mx-auto px-6 py-5 flex items-center justify-between border-b border-slate-200/80 bg-white/70 backdrop-blur-md">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-600 flex items-center justify-center text-white font-black text-lg shadow-sm shadow-indigo-600/30">
+          <div className="w-9 h-9 rounded-xl bg-linear-to-tr from-indigo-600 to-violet-600 flex items-center justify-center text-white font-black text-lg shadow-sm shadow-indigo-600/30">
             T
           </div>
           <span className="font-bold text-xl tracking-tight text-slate-900">
@@ -89,7 +88,7 @@ export default function Home() {
         <div className="text-center max-w-3xl mb-10">
           <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900 mb-4 leading-tight">
             Intelligent Candidate Management <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-indigo-500 to-violet-600">
+            <span className="text-transparent bg-clip-text bg-linear-to-r from-indigo-600 via-indigo-500 to-violet-600">
               & Resume Ingestion
             </span>
           </h1>

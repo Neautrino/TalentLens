@@ -103,7 +103,7 @@ export function ResumeDropzone() {
           <div className="bg-slate-50/80 border border-slate-200/80 rounded-2xl p-4 text-left text-xs mb-6 space-y-2 font-mono">
             <div className="flex justify-between">
               <span className="text-slate-500">File Name:</span>
-              <span className="font-semibold text-slate-800 truncate max-w-[240px]">{file?.name}</span>
+              <span className="font-semibold text-slate-800 truncate max-w-60">{file?.name}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-slate-500">Status:</span>
@@ -221,7 +221,7 @@ export function ResumeDropzone() {
               </div>
               <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden border border-slate-200/60 p-0.5">
                 <div
-                  className="bg-gradient-to-r from-indigo-600 via-indigo-500 to-violet-600 h-full transition-all duration-300 rounded-full"
+                  className="bg-linear-to-r from-indigo-600 via-indigo-500 to-violet-600 h-full transition-all duration-300 rounded-full"
                   style={{ width: `${progress}%` }}
                 />
               </div>
@@ -233,7 +233,7 @@ export function ResumeDropzone() {
             <button
               type="submit"
               disabled={!file || isPending}
-              className="w-full py-4 px-6 rounded-2xl font-extrabold text-sm tracking-wide text-white bg-gradient-to-r from-indigo-600 via-indigo-500 to-violet-600 hover:from-indigo-700 hover:to-violet-700 disabled:opacity-50 disabled:pointer-events-none shadow-lg shadow-indigo-500/25 hover:shadow-xl hover:shadow-indigo-500/35 active:scale-[0.99] transition-all duration-200 flex items-center justify-center gap-2.5 cursor-pointer"
+              className="w-full py-4 px-6 rounded-2xl font-extrabold text-sm tracking-wide text-white bg-linear-to-r from-indigo-600 via-indigo-500 to-violet-600 hover:from-indigo-700 hover:to-violet-700 disabled:opacity-50 disabled:pointer-events-none shadow-lg shadow-indigo-500/25 hover:shadow-xl hover:shadow-indigo-500/35 active:scale-[0.99] transition-all duration-200 flex items-center justify-center gap-2.5 cursor-pointer"
             >
               {isPending ? (
                 <>
