@@ -15,6 +15,7 @@
     "@repo/eslint-config": "*",
     "@repo/typescript-config": "*",
     "@types/bun": "latest",
+    "@types/pdf-parse": "^1.1.5",
     "eslint": "^9.39.1"
   },
   "dependencies": {
@@ -22,6 +23,8 @@
     "@aws-sdk/s3-request-presigner": "^3.1104.0",
     "@hono/zod-validator": "^0.9.0",
     "hono": "^4.13.0",
+    "mammoth": "^1.12.1",
+    "pdf-parse": "^2.4.5",
     "zod": "^4.4.3"
   }
 }

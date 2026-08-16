@@ -1,4 +1,4 @@
-import { HeadBucketCommand, CreateBucketCommand, HeadObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3"
+import { HeadBucketCommand, CreateBucketCommand, HeadObjectCommand, PutObjectCommand, S3Client, GetObjectCommand } from "@aws-sdk/client-s3"
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner"
 
 const endpoint = process.env.MINIO_ENDPOINT || 'http://localhost:9000'
@@ -60,6 +60,28 @@ export async function verifyObjectExists(objectKey: string) {
             }
         }
         console.error('Error verifying object exists: ', error)
+        throw error
+    }
+}
+
+export async function getObjectBuffer(objectKey: string): Promise<Buffer> {
+    const command = new GetObjectCommand({
+        Bucket: bucketName,
+        Key: objectKey,
+    })
+
+    try {
+        const response = await s3Client.send(command)
+        if(!response.Body) {
+            throw new Error(`Object ${objectKey} has no body content`)
+        }
+
+        const byteArray = await response.Body.transformToByteArray()
+        const buffer = Buffer.from(byteArray)
+        console.log(`[S3] Successfully fetched object buffer (${buffer.length} bytes)`)
+        return buffer
+    } catch (error) {
+        console.error(`[S3] Error fetching object buffer for key "${objectKey}":`, error)
         throw error
     }
 }

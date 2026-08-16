@@ -7,7 +7,13 @@ export interface FileRecord {
     fileType: string
     fileSize: number
     uploadedAt: string
-    status: 'pending' | 'completed'
+    status: 'pending' | 'completed' | 'parsing' | 'parsed' | 'failed'
+    rawText?: string
+    parsedData?: {
+        name?: string | null
+        email?: string | null
+        phone?: string | null
+    }
 }
 
 export interface JobRecord {

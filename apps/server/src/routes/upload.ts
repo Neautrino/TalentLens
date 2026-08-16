@@ -1,9 +1,10 @@
 import { Hono } from "hono";
-import { getPresignedPutUrl, verifyObjectExists } from "../lib/s3";
+import { getObjectBuffer, getPresignedPutUrl, verifyObjectExists } from "../lib/s3";
 import { z } from "zod";
 import { validateJson } from "../lib/validator";
 import { sendError, sendSuccess } from "../lib/apiResponse";
 import { FileRecord, getFileRecord, setActiveJobRecord, setFileRecord } from "../store/store";
+import { extractBasicInfo, extractTextFromBuffer } from "../lib/parser";
 export const uploadRouter = new Hono()
 
 const ALLOWED_FILE_TYPES = [
@@ -107,10 +108,27 @@ uploadRouter.post('/complete', validateJson(completeUploadSchema), async (c) => 
     setFileRecord(record)
 
     console.log(`Upload completed: ${body.objectKey} for candidate ${body.metadata?.candidateName || 'unknown'}`)
+
+    try {
+        const buffer = await getObjectBuffer(body.objectKey)
+        const rawText = await extractTextFromBuffer(buffer, record.fileType)
+        const parsedData = extractBasicInfo(rawText)
+        record.rawText = rawText
+        record.parsedData = parsedData
+        record.status = 'parsed'
+
+        console.log(rawText)
+        setFileRecord(record)
+    } catch (error) {
+        console.error(`Parsing failed for ${body.fileId}:`, error)
+        record.status = 'failed'
+        setFileRecord(record)
+    }
+
     return sendSuccess({
         c,
         data: {
-            fileId: body.fileId
+            fileId: body.fileId,
         },
         message: 'Upload completed successfully',
         statusCode: 200
