@@ -1,7 +1,9 @@
 export interface PresignedUrlRequest {
+  userId?: string
   fileName: string
   fileType: string
   fileSize: number
+  jobDescription?: string
 }
 
 export interface PresignedUrlData {
@@ -11,6 +13,7 @@ export interface PresignedUrlData {
 }
 
 export interface CompleteUploadRequest {
+  userId?: string
   fileId: string
   objectKey: string
   metadata?: {
@@ -30,16 +33,23 @@ export interface CompleteUploadResponse {
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
+const DEFAULT_USER_ID = 'user_dummy_123'
+
 // 1. Request Presigned URL from Hono Server
 export async function getPresignedUrl(
   params: PresignedUrlRequest
 ): Promise<PresignedUrlData> {
+  const payload = {
+    userId: params.userId || DEFAULT_USER_ID,
+    ...params,
+  }
+
   const res = await fetch(`${API_BASE_URL}/api/upload/presigned-url`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify(params),
+    body: JSON.stringify(payload),
   })
 
   const json = await res.json()
@@ -92,12 +102,17 @@ export async function uploadToMinio(
 export async function completeUpload(
   params: CompleteUploadRequest
 ): Promise<CompleteUploadResponse> {
+  const payload = {
+    userId: params.userId || DEFAULT_USER_ID,
+    ...params,
+  }
+
   const res = await fetch(`${API_BASE_URL}/api/upload/complete`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify(params),
+    body: JSON.stringify(payload),
   })
 
   const json = await res.json()

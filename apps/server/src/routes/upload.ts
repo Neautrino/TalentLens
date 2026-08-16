@@ -13,17 +13,19 @@ const ALLOWED_FILE_TYPES = [
 ] as const
 
 const presignedUrlSchema = z.object({
-  userId: z.string().min(1, 'User ID is required'),
-  fileName: z.string().min(1, 'File name is required'),
+  userId: z.string({ error: 'User ID is required' }).min(1, 'User ID cannot be empty'),
+  fileName: z.string({ error: 'File name is required' }).min(1, 'File name cannot be empty'),
   jobDescription: z.string().optional(),
-  fileType: z.enum(ALLOWED_FILE_TYPES, { error: 'Invalid file type. Only PDF (.pdf) and Word documents (.docx, .doc) are allowed' }),
-  fileSize: z.number().refine((val) => val > 0 && val <= 10 * 1024 * 1024, 'File size must be greater than 0 and less than 10MB'),
+  fileType: z.enum(ALLOWED_FILE_TYPES, {
+    error: 'Invalid file type. Only PDF (.pdf) and Word documents (.docx, .doc) are allowed',
+  }),
+  fileSize: z.number({ error: 'File size is required' }).refine((val) => val > 0 && val <= 10 * 1024 * 1024, 'File size must be greater than 0 and less than 10MB'),
 })
 
 const completeUploadSchema = z.object({
-  userId: z.string().min(1, 'User ID is required'),
-  fileId: z.uuid('Invalid file ID format'),
-  objectKey: z.string().min(1, 'Object key is required'),
+  userId: z.string({ error: 'User ID is required' }).min(1, 'User ID cannot be empty'),
+  fileId: z.string({ error: 'File ID is required' }).uuid('Invalid file ID format'),
+  objectKey: z.string({ error: 'Object key is required' }).min(1, 'Object key cannot be empty'),
   metadata: z
     .object({
       title: z.string().optional(),

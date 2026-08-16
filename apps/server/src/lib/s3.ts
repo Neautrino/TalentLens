@@ -1,4 +1,4 @@
-import { HeadObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3"
+import { HeadBucketCommand, CreateBucketCommand, HeadObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3"
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner"
 
 const endpoint = process.env.MINIO_ENDPOINT || 'http://localhost:9000'
@@ -17,6 +17,21 @@ export const s3Client = new S3Client({
     },
     forcePathStyle: true
 })
+
+export async function ensureBucketExists() {
+    try {
+        await s3Client.send(new HeadBucketCommand({ Bucket: bucketName }))
+        console.log(`Bucket "${bucketName}" already exists.`)
+    } catch (error: any) {
+        if (error.name === 'NotFound' || error.$metadata?.httpStatusCode === 404) {
+            console.log(`Bucket "${bucketName}" not found. Creating it...`)
+            await s3Client.send(new CreateBucketCommand({ Bucket: bucketName }))
+            console.log(`Bucket "${bucketName}" created successfully.`)
+        } else {
+            console.error(`Error checking/creating S3 bucket "${bucketName}":`, error)
+        }
+    }
+}
 
 export async function getPresignedPutUrl(objectKey: string, contentType: string) {
     const command = new PutObjectCommand({
