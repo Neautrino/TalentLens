@@ -4,6 +4,7 @@ import { healthRouter } from './routes/health'
 import { logger } from 'hono/logger'
 import { uploadRouter } from './routes/upload'
 import { ensureBucketExists } from './lib/s3'
+import { scrapeLinkedInProfile } from './scraper/linkedin'
 
 const PORT = process.env.PORT || 8000
 
@@ -20,6 +21,20 @@ app.use(logger())
 
 app.route('/api/health', healthRouter)
 app.route('/api/upload', uploadRouter)
+
+// Temporary test route for LinkedIn Scraper
+app.post('/api/test-scrape', async (c) => {
+  const { url } = await c.req.json()
+  if (!url) {
+    return c.json({ error: 'LinkedIn profile URL is required' }, 400)
+  }
+  try {
+    const profileData = await scrapeLinkedInProfile(url)
+    return c.json({ success: true, data: profileData })
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500)
+  }
+})
 
 export default {
   port: PORT,
