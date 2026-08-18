@@ -4,7 +4,7 @@ import { healthRouter } from './routes/health'
 import { logger } from 'hono/logger'
 import { uploadRouter } from './routes/upload'
 import { ensureBucketExists } from './lib/s3'
-import { scrapeLinkedInProfile } from './scraper/linkedin'
+import { scrapeGitHubProfile } from './scraper/github'
 
 const PORT = process.env.PORT || 8000
 
@@ -26,10 +26,10 @@ app.route('/api/upload', uploadRouter)
 app.post('/api/test-scrape', async (c) => {
   const { url } = await c.req.json()
   if (!url) {
-    return c.json({ error: 'LinkedIn profile URL is required' }, 400)
+    return c.json({ error: 'Github profile URL is required' }, 400)
   }
   try {
-    const profileData = await scrapeLinkedInProfile(url)
+    const profileData = await scrapeGitHubProfile(url)
     return c.json({ success: true, data: profileData })
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500)
