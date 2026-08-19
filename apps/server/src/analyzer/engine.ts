@@ -1,230 +1,279 @@
-import { BUZZWORDS, METRIC_PATTERNS, STRONG_ACTION_VERBS, WEAK_STARTERS } from "./rules";
-import { checkStandardSections, extractBulletPoints, extractContactInfo } from "./parserUtils";
+import { 
+  BUZZWORDS, 
+  FILLER_WORDS, 
+  METRIC_PATTERNS, 
+  PRONOUNS, 
+  WEAK_STARTERS, 
+  SECTION_ALIASES 
+} from "./rules";
+import { extractBulletPoints, extractContactInfo } from "./parserUtils";
 
-export interface FeedbackItem {
-  category: "quantification" | "action_verbs" | "buzzwords" | "bullet_length" | "contact_info" | "sections";
-  severity: "error" | "warning" | "suggestion" | "pass";
-  title: string;
+export interface HighlightedIssue {
+  type: string;
+  severity: "HIGH" | "MEDIUM" | "LOW";
   message: string;
-  context?: string;
+  context: string; // The specific bullet point or sentence
+  word?: string;   // The exact word to highlight in red on the frontend
+  suggestedFix?: string;
+}
+
+export interface CategoryScores {
+  impact: number;  // out of 10
+  brevity: number; // out of 10
+  style: number;   // out of 10
+  ats: number;     // out of 10
 }
 
 export interface AnalysisResult {
-  overallScore: number; // 0 - 100
-  breakdown: {
-    impactScore: number;       // 0 - 30
-    actionVerbScore: number;   // 0 - 25
-    bulletQualityScore: number;// 0 - 25
-    completenessScore: number; // 0 - 20
+  overallScore: number; // out of 100
+  categoryScores: CategoryScores;
+  issues: {
+    high: HighlightedIssue[];
+    medium: HighlightedIssue[];
+    low: HighlightedIssue[];
   };
-  stats: {
+  metrics: {
     totalBullets: number;
     quantifiedBullets: number;
-    strongVerbBullets: number;
-    weakStarterBullets: number;
-    buzzwordsFound: string[];
   };
-  feedback: FeedbackItem[];
 }
 
 export function analyzeResume(rawText: string): AnalysisResult {
+  // Only score actual sentences (e.g., length >= 5 words), otherwise "Node.js" gets counted as a bullet missing metrics
   const bullets = extractBulletPoints(rawText);
-  const contact = extractContactInfo(rawText);
-  const sections = checkStandardSections(rawText);
+  const validBullets = bullets.filter(b => b.wordCount >= 6);
+  const lowerText = rawText.toLowerCase();
   
-  const feedback: FeedbackItem[] = [];
-
-  // ==========================================
-  // 1. IMPACT & QUANTIFICATION CHECK (0-30 pts)
-  // ==========================================
+  const allIssues: HighlightedIssue[] = [];
   let quantifiedBulletsCount = 0;
 
-  for (const bullet of bullets) {
-    const isQuantified = METRIC_PATTERNS.some((pattern) => pattern.test(bullet.text));
-    if (isQuantified) {
-      quantifiedBulletsCount++;
-    }
-  }
-
-  const totalBullets = bullets.length;
-  const quantRatio = totalBullets > 0 ? quantifiedBulletsCount / totalBullets : 0;
-  const impactScore = Math.min(30, Math.round(quantRatio * 100 * 0.6)); // max 30 pts
-
-  if (totalBullets > 0) {
-    if (quantRatio >= 0.4) {
-      feedback.push({
-        category: "quantification",
-        severity: "pass",
-        title: "Strong Quantification",
-        message: `Great job! ${Math.round(quantRatio * 100)}% of your bullet points include measurable metrics or numbers.`
-      });
-    } else if (quantRatio >= 0.2) {
-      feedback.push({
-        category: "quantification",
-        severity: "warning",
-        title: "Add More Quantifiable Results",
-        message: `Only ${Math.round(quantRatio * 100)}% of your bullet points contain numbers or metrics. Try adding percentages, revenue, time saved, or team sizes.`
-      });
-    } else {
-      feedback.push({
-        category: "quantification",
-        severity: "error",
-        title: "Lack of Metrics and Data",
-        message: `Very few bullets contain numbers or measurable achievements. Recruiters prioritize data-driven results.`
-      });
-    }
-  }
-
-  // ==========================================
-  // 2. ACTION VERBS & WORD CHOICE (0-25 pts)
-  // ==========================================
-  let strongVerbCount = 0;
+  // Trackers for scoring penalties
   let weakStarterCount = 0;
-
-  for (const bullet of bullets) {
-    const firstWord = bullet.text.split(/\s+/)[0]?.toLowerCase().replace(/[^a-z]/g, "");
-
-    if (firstWord && STRONG_ACTION_VERBS.includes(firstWord)) {
-      strongVerbCount++;
-    }
-
-    const lowerBullet = bullet.text.toLowerCase();
-    for (const weakStarter of WEAK_STARTERS) {
-      if (lowerBullet.startsWith(weakStarter)) {
-        weakStarterCount++;
-        feedback.push({
-          category: "action_verbs",
-          severity: "warning",
-          title: "Weak Bullet Opening",
-          message: `Avoid starting bullet points with weak phrases like "${weakStarter}". Use a strong action verb instead.`,
-          context: bullet.text
+  let buzzwordCount = 0;
+  let fillerWordCount = 0;
+  let pronounCount = 0;
+  let lengthIssueCount = 0;
+  let repetitionCount = 0;
+  
+  // Tracker for action verb repetition
+  const verbFrequency: Record<string, number> = {};
+  // ==========================================
+  // 1. BULLET POINT ANALYSIS (Impact, Style, Brevity)
+  // ==========================================
+  for (const bullet of validBullets) {
+    const textLower = bullet.text.toLowerCase();
+    
+    // Repetition Check: Track the first word of the bullet
+    const firstWord = textLower.split(/\s+/)[0];
+    if (firstWord && firstWord.length > 2) {
+      verbFrequency[firstWord] = (verbFrequency[firstWord] || 0) + 1;
+      if (verbFrequency[firstWord] === 2) { // Flag on the second offense
+        repetitionCount++;
+        allIssues.push({
+          type: "REPETITION",
+          severity: "MEDIUM",
+          message: "You used this action verb multiple times. Vary your vocabulary.",
+          context: bullet.text,
+          word: firstWord,
+          suggestedFix: "Use a synonym (e.g., 'Engineered', 'Created', 'Deployed')."
         });
-        break;
       }
     }
-  }
-
-  // Check for Buzzwords in full rawText
-  const lowerRawText = rawText.toLowerCase();
-  const buzzwordsFound: string[] = [];
-
-  for (const buzzword of BUZZWORDS) {
-    if (lowerRawText.includes(buzzword)) {
-      buzzwordsFound.push(buzzword);
+    
+    // A. Impact Check: Does it have metrics?
+    const hasMetric = METRIC_PATTERNS.some(pattern => pattern.test(bullet.text));
+    if (hasMetric) {
+      quantifiedBulletsCount++;
+    } else {
+      allIssues.push({
+        type: "MISSING_METRIC",
+        severity: "HIGH",
+        message: "Add numbers or metrics to quantify your accomplishments.",
+        context: bullet.text,
+        suggestedFix: "Use the XYZ formula: Accomplished [X] as measured by [Y], by doing [Z]."
+      });
     }
-  }
 
-  if (buzzwordsFound.length > 0) {
-    feedback.push({
-      category: "buzzwords",
-      severity: "warning",
-      title: "Overused Buzzwords Detected",
-      message: `Found overused buzzwords: ${buzzwordsFound.join(", ")}. Replace them with specific actions and facts.`
-    });
-  } else {
-    feedback.push({
-      category: "buzzwords",
-      severity: "pass",
-      title: "No Overused Buzzwords",
-      message: "Good job avoiding generic buzzwords and clichés."
-    });
-  }
+    // B. Impact Check: Weak Starters
+    const weakStarter = WEAK_STARTERS.find(weak => textLower.startsWith(weak));
+    if (weakStarter) {
+      weakStarterCount++;
+      allIssues.push({
+        type: "WEAK_VERB",
+        severity: "HIGH",
+        message: "Bullet starts with weak, responsibility-driven language.",
+        context: bullet.text,
+        word: weakStarter,
+        suggestedFix: "Start with a strong action verb (e.g., 'Architected', 'Spearheaded')."
+      });
+    }
 
-  const verbRatio = totalBullets > 0 ? strongVerbCount / totalBullets : 0;
-  const rawVerbScore = Math.round(verbRatio * 25) - (weakStarterCount * 2) - (buzzwordsFound.length * 2);
-  const actionVerbScore = Math.max(0, Math.min(25, rawVerbScore));
+    // C. Style Check: Personal Pronouns
+    for (const pronoun of PRONOUNS) {
+      const regex = new RegExp(`\\b${pronoun}\\b`, 'i');
+      if (regex.test(textLower)) {
+        pronounCount++;
+        allIssues.push({
+          type: "PERSONAL_PRONOUN",
+          severity: "HIGH",
+          message: "Resumes should never contain personal pronouns.",
+          context: bullet.text,
+          word: pronoun,
+          suggestedFix: "Remove the pronoun and start the sentence directly with an action verb."
+        });
+      }
+    }
 
-  // ==========================================
-  // 3. BULLET QUALITY & LENGTH (0-25 pts)
-  // ==========================================
-  let shortBulletCount = 0;
-  let longBulletCount = 0;
+    // D. Style Check: Buzzwords & Clichés
+    for (const buzz of BUZZWORDS) {
+      const regex = new RegExp(`\\b${buzz}\\b`, 'i');
+      if (regex.test(textLower)) {
+        buzzwordCount++;
+        allIssues.push({
+          type: "BUZZWORD",
+          severity: "MEDIUM",
+          message: "Vague buzzwords add little value and are considered clichés by recruiters.",
+          context: bullet.text,
+          word: buzz,
+          suggestedFix: "Replace with a specific technical skill or measurable achievement."
+        });
+      }
+    }
 
-  for (const bullet of bullets) {
+    // E. Brevity Check: Filler Words
+    for (const filler of FILLER_WORDS) {
+      const regex = new RegExp(`\\b${filler}\\b`, 'i');
+      if (regex.test(textLower)) {
+        fillerWordCount++;
+        allIssues.push({
+          type: "FILLER_WORD",
+          severity: "LOW",
+          message: "Unnecessary adverbs waste space and dilute your impact.",
+          context: bullet.text,
+          word: filler,
+          suggestedFix: "Delete this word."
+        });
+      }
+    }
+
+    // F. Brevity Check: Length
     if (bullet.wordCount < 5) {
-      shortBulletCount++;
-    } else if (bullet.wordCount > 35) {
-      longBulletCount++;
-      feedback.push({
-        category: "bullet_length",
-        severity: "suggestion",
-        title: "Bullet Point Too Long",
-        message: `This bullet point is ${bullet.wordCount} words long. Consider splitting it for better readability.`,
+      lengthIssueCount++;
+      allIssues.push({
+        type: "BULLET_TOO_SHORT",
+        severity: "LOW",
+        message: "Bullet point is too short to provide meaningful context.",
         context: bullet.text
+      });
+    } else if (bullet.wordCount > 35) {
+      lengthIssueCount++;
+      allIssues.push({
+        type: "BULLET_TOO_LONG",
+        severity: "MEDIUM",
+        message: "Bullet point is too long and difficult to skim.",
+        context: bullet.text,
+        suggestedFix: "Split this into two separate bullet points."
       });
     }
   }
 
-  let bulletQualityScore = 25;
-  if (shortBulletCount > 0) bulletQualityScore -= Math.min(10, shortBulletCount * 3);
-  if (longBulletCount > 0) bulletQualityScore -= Math.min(10, longBulletCount * 2);
-  bulletQualityScore = Math.max(0, bulletQualityScore);
-
   // ==========================================
-  // 4. COMPLETENESS & CONTACT INFO (0-20 pts)
+  // 2. ATS & STRUCTURE ANALYSIS
   // ==========================================
-  let completenessScore = 20;
+  let atsPenalty = 0;
+  
+  // Smarter section detection using aliases
+  const checkSection = (aliases: string[]) => {
+    return aliases.some(alias => lowerText.includes(alias.toLowerCase()));
+  };
 
-  if (!contact.hasEmail) {
-    completenessScore -= 5;
-    feedback.push({
-      category: "contact_info",
-      severity: "error",
-      title: "Missing Email Address",
-      message: "Could not find a valid email address."
+  if (!checkSection(SECTION_ALIASES?.experience || [])) {
+    atsPenalty += 4;
+    allIssues.push({
+      type: "MISSING_SECTION", severity: "HIGH", context: "Resume Body",
+      message: "Could not detect an 'Experience' or 'Work History' section."
     });
   }
-
-  if (!contact.hasPhone) {
-    completenessScore -= 3;
-    feedback.push({
-      category: "contact_info",
-      severity: "warning",
-      title: "Missing Phone Number",
+  if (!checkSection(SECTION_ALIASES?.education || [])) {
+    atsPenalty += 2;
+    allIssues.push({
+      type: "MISSING_SECTION", severity: "HIGH", context: "Resume Body",
+      message: "Could not detect an 'Education' section."
+    });
+  }
+  if (!checkSection(SECTION_ALIASES?.skills || [])) {
+    atsPenalty += 1;
+    allIssues.push({
+      type: "MISSING_SECTION", severity: "MEDIUM", context: "Resume Body",
+      message: "Could not detect a dedicated 'Skills' section."
+    });
+  }
+  
+  // Contact Info Checking
+  const contacts = extractContactInfo(rawText);
+  if (!contacts.hasLinkedIn) {
+    atsPenalty += 3;
+    allIssues.push({
+      type: "MISSING_CONTACT", severity: "HIGH", context: "Header",
+      message: "Could not detect a LinkedIn URL. Recruiters heavily rely on this."
+    });
+  }
+  if (!contacts.hasPhone) {
+    atsPenalty += 2;
+    allIssues.push({
+      type: "MISSING_CONTACT", severity: "HIGH", context: "Header",
       message: "Could not detect a phone number."
     });
   }
+  // ==========================================
+  // 3. SCORING MATH (Calculated out of 10)
+  // ==========================================
+  const totalBullets = validBullets.length || 1; // prevent divide by zero
+  
+  // Impact: "Medium" Earning Model. Give a base score of 3, then scale up.
+  // e.g., If 8 out of 22 bullets are quantified (36%), impact is 3 + (0.36 * 10) = 6.6
+  let impactScore = 3.0 + ((quantifiedBulletsCount / totalBullets) * 10);
+  impactScore -= (weakStarterCount * 1.0); // Penalty for weak starters
+  
+  // Style: Medium Deduction Model
+  let styleScore = 10 - (pronounCount * 2) - (buzzwordCount * 0.5) - (repetitionCount * 1.0);
+  
+  // Brevity: Medium Deduction Model
+  let brevityScore = 10 - (lengthIssueCount * 0.5) - (fillerWordCount * 0.25);
+  
+  // ATS: Base 10 minus missing core sections and missing contacts
+  let atsScore = 10 - atsPenalty;
 
-  if (!contact.hasLinkedIn) {
-    completenessScore -= 4;
-    feedback.push({
-      category: "contact_info",
-      severity: "suggestion",
-      title: "Missing LinkedIn Link",
-      message: "Adding a LinkedIn profile URL increases recruiter response rates."
-    });
-  }
+  // Clamp all scores between 0 and 10
+  impactScore = Math.max(0, Math.min(10, Number(impactScore.toFixed(1))));
+  styleScore = Math.max(0, Math.min(10, Number(styleScore.toFixed(1))));
+  brevityScore = Math.max(0, Math.min(10, Number(brevityScore.toFixed(1))));
+  atsScore = Math.max(0, Math.min(10, Number(atsScore.toFixed(1))));
 
-  if (sections.missing.length > 0) {
-    completenessScore -= sections.missing.length * 3;
-    feedback.push({
-      category: "sections",
-      severity: "warning",
-      title: "Missing Key Sections",
-      message: `Could not clearly identify sections: ${sections.missing.join(", ")}.`
-    });
-  }
+  // Overall Score (Weighted: Impact 40%, Style 25%, ATS 20%, Brevity 15%)
+  const overallScore = Math.round(
+    (impactScore * 4) + (styleScore * 2.5) + (atsScore * 2) + (brevityScore * 1.5)
+  );
 
-  completenessScore = Math.max(0, completenessScore);
-
-  // Calculate Overall Score
-  const overallScore = Math.min(100, impactScore + actionVerbScore + bulletQualityScore + completenessScore);
-
+  // ==========================================
+  // 4. BUCKET ISSUES FOR FRONTEND
+  // ==========================================
   return {
     overallScore,
-    breakdown: {
-      impactScore,
-      actionVerbScore,
-      bulletQualityScore,
-      completenessScore,
+    categoryScores: {
+      impact: impactScore,
+      brevity: brevityScore,
+      style: styleScore,
+      ats: atsScore
     },
-    stats: {
-      totalBullets,
-      quantifiedBullets: quantifiedBulletsCount,
-      strongVerbBullets: strongVerbCount,
-      weakStarterBullets: weakStarterCount,
-      buzzwordsFound,
+    issues: {
+      high: allIssues.filter(i => i.severity === "HIGH"),
+      medium: allIssues.filter(i => i.severity === "MEDIUM"),
+      low: allIssues.filter(i => i.severity === "LOW")
     },
-    feedback,
+    metrics: {
+      totalBullets: validBullets.length,
+      quantifiedBullets: quantifiedBulletsCount
+    }
   };
 }
