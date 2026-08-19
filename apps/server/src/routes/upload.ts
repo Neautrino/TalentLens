@@ -5,6 +5,7 @@ import { validateJson } from "../lib/validator";
 import { sendError, sendSuccess } from "../lib/apiResponse";
 import { FileRecord, getFileRecord, setActiveJobRecord, setFileRecord } from "../store/store";
 import { extractBasicInfo, extractTextFromBuffer } from "../lib/parser";
+import { analyzeResume } from "../analyzer/engine";
 export const uploadRouter = new Hono()
 
 const ALLOWED_FILE_TYPES = [
@@ -113,11 +114,13 @@ uploadRouter.post('/complete', validateJson(completeUploadSchema), async (c) => 
         const buffer = await getObjectBuffer(body.objectKey)
         const rawText = await extractTextFromBuffer(buffer, record.fileType)
         const parsedData = extractBasicInfo(rawText)
+        const analysisResult = analyzeResume(rawText);
         record.rawText = rawText
         record.parsedData = parsedData
+        record.analysisResult = analysisResult
         record.status = 'parsed'
 
-        console.log(rawText)
+        console.log(analysisResult)
         setFileRecord(record)
     } catch (error) {
         console.error(`Parsing failed for ${body.fileId}:`, error)
@@ -134,3 +137,37 @@ uploadRouter.post('/complete', validateJson(completeUploadSchema), async (c) => 
         statusCode: 200
     })
 })
+
+uploadRouter.get('/analysis/:fileId', async (c) => {
+    const fileId = c.req.param('fileId')
+    const record = getFileRecord(fileId)
+
+    if(!record) {
+        return sendError({
+            c,
+            message: 'File record not found',
+            statusCode: 404
+        })
+    }
+
+    if(!record.analysisResult) {
+        return sendError({
+            c,
+            message: "Analysis result not available yet for this file",
+            statusCode: 400
+        });
+    }
+
+    return sendSuccess({
+        c,
+        data: {
+            fileId: record.fileId,
+            fileName: record.fileName,
+            parsedData: record.parsedData,
+            analysis: record.analysisResult
+        },
+        message: 'Analysis retrieved successfully',
+        statusCode: 200
+    })
+})
+

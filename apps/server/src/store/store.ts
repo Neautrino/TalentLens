@@ -1,3 +1,5 @@
+import { AnalysisResult } from "../analyzer/engine"
+
 export interface FileRecord {
     fileId: string
     userId: string
@@ -14,6 +16,7 @@ export interface FileRecord {
         email?: string | null
         phone?: string | null
     }
+    analysisResult?: AnalysisResult
 }
 
 export interface JobRecord {
