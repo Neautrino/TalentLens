@@ -143,7 +143,7 @@ export function ResumeAnalysisView({ file, onReset }: ResumeAnalysisViewProps) {
         </div>
 
         {/* Right Side: Resume Viewer / Preview (7 cols) */}
-        <div className="lg:col-span-7 bg-white/90 backdrop-blur-xl border border-slate-200/90 rounded-2xl p-4 shadow-sm min-h-[650px] flex flex-col">
+        <div className="lg:col-span-7 bg-white/90 backdrop-blur-xl border border-slate-200/90 rounded-2xl p-4 shadow-sm min-h-162.5 flex flex-col">
           <div className="flex items-center justify-between pb-3 px-2 border-b border-slate-100 mb-3">
             <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
               <span>📄</span> Resume Preview
@@ -160,11 +160,11 @@ export function ResumeAnalysisView({ file, onReset }: ResumeAnalysisViewProps) {
             )}
           </div>
 
-          <div className="flex-1 w-full rounded-xl overflow-hidden bg-slate-100 border border-slate-200/80 min-h-[580px] flex items-center justify-center">
+          <div className="flex-1 w-full rounded-xl overflow-hidden bg-slate-100 border border-slate-200/80 min-h-145 flex items-center justify-center">
             {pdfUrl && file?.type === 'application/pdf' ? (
               <iframe
                 src={pdfUrl}
-                className="w-full h-full min-h-[580px]"
+                className="w-full h-full min-h-145"
                 title="Resume PDF Preview"
               />
             ) : (

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { LandingPage } from '../components/LandingPage'
-import { Dashboard } from '../components/Dashboard'
+import { Dashboard } from '../components/dashboard/Dashboard'
 
 export default function Home() {
   // Temporary toggle to let you preview the new UI without uploading a PDF

@@ -1,5 +1,5 @@
 import React from 'react'
-import { Button } from './ui/button'
+import { Button } from '../ui/button'
 
 interface DashboardProps {
   onReset?: () => void
@@ -33,7 +33,7 @@ export function Dashboard({ onReset }: DashboardProps) {
           
           {/* Overall Score Dial */}
           <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm flex flex-col items-center justify-center relative overflow-hidden">
-            <div className="absolute top-0 w-full h-1.5 bg-gradient-to-r from-rose-500 via-amber-400 to-emerald-500" />
+            <div className="absolute top-0 w-full h-1.5 bg-linear-to-r from-rose-500 via-amber-400 to-emerald-500" />
             <div className="w-32 h-32 rounded-full border-[6px] border-emerald-400 flex items-center justify-center mb-3 shadow-inner bg-slate-50">
               <span className="text-5xl font-black text-slate-800 tracking-tighter">74</span>
             </div>
