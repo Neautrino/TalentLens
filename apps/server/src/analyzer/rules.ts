@@ -77,3 +77,19 @@ export const METRIC_PATTERNS = [
   /\b(?:reduced|increased|improved|saved|grew|scaled|cutting)\s+(?:by|to)\s+\d+/i, // Contextual Impact
   /\d+(?:[.,]\d+)*(?:k|m|b)?\s*(?:users|clients|customers|students|requests|ms|seconds|minutes|hours|days|weeks|months|years|lbs|kg|gb|mb|tb)\b/i // Associated Units
 ];
+
+// NEW: A massive whitelist of tech terms that standard dictionaries think are typos
+export const TECH_WHITELIST = [
+  "javascript", "typescript", "python", "golang", "nodejs", "react", "reactjs",
+  "nextjs", "postgresql", "redis", "mongodb", "supabase", "mysql", "docker",
+  "github", "jenkins", "nginx", "linux", "aws", "gcp", "git", "postman",
+  "razorpay", "clerk", "signoz", "sentry", "opentelemetry", "leetcode",
+  "geeksforgeeks", "frontend", "backend", "fullstack", "api", "apis", "saas",
+  "ui", "ux", "sql", "nosql", "ci", "cd", "k8s", "kubernetes", "django",
+  "nestjs", "expressjs", "web3", "solidity", "solana", "ethereum", "vue",
+  "angular", "graphql", "rest", "json", "html", "css", "tailwind", "tailwindcss",
+  "vite", "webpack", "npm", "yarn", "pnpm", "bun", "vercel", "heroku", "netlify",
+  "dsa", "algorithms", "oop", "mvc", "orm", "jwt", "oauth", "auth", "devops",
+  "microservices", "serverless", "webhook", "webhooks", "cron", "dlq", "pdf",
+  "pdfs", "gcs", "s3", "ec2", "rds", "app", "apps", "repo", "repos", "sdk"
+];
