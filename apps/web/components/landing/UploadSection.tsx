@@ -1,15 +1,20 @@
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useFileUpload } from '../../hooks/useFileUpload'
 import { Dropzone } from '../ui/dropzone'
+import { useTalentStore } from '../../store/useTalentStore'
 
 const ALLOWED_EXTENSIONS = ['.pdf', '.docx', '.doc']
 const MAX_FILE_SIZE_MB = 2
 
 interface UploadSectionProps {
-  onUploadSuccess?: (uploadedFile: File) => void
+  onUploadSuccess?: (uploadedFile: File, responseData: any) => void
 }
 
 export function UploadSection({ onUploadSuccess }: UploadSectionProps) {
+  const router = useRouter()
+  const setResumeData = useTalentStore((state) => state.setResumeData)
+
   const [file, setFile] = useState<File | null>(null)
   const [validationError, setValidationError] = useState<string | null>(null)
 
@@ -50,7 +55,7 @@ export function UploadSection({ onUploadSuccess }: UploadSectionProps) {
 
     try {
       const nameWithoutExt = file.name.split('.')[0]?.replace(/[-_]/g, ' ') || 'Candidate'
-      await upload({
+      const response = await upload({
         file,
         metadata: {
           title: file.name,
@@ -59,8 +64,11 @@ export function UploadSection({ onUploadSuccess }: UploadSectionProps) {
         },
       })
       if (onUploadSuccess) {
-        onUploadSuccess(file)
+        onUploadSuccess(file, response)
       }
+      // Save to global store and navigate to dashboard
+      setResumeData(file, response.data)
+      router.push('/dashboard')
     } catch {
       // Error handled by useFileUpload hook
     }

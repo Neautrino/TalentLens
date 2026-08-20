@@ -132,6 +132,9 @@ uploadRouter.post('/complete', validateJson(completeUploadSchema), async (c) => 
         c,
         data: {
             fileId: body.fileId,
+            fileName: record.fileName,
+            parsedData: record.parsedData,
+            analysis: record.analysisResult
         },
         message: 'Upload completed successfully',
         statusCode: 200

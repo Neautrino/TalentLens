@@ -1,16 +1,21 @@
 import React from 'react'
 import { Button } from '../ui/button'
+import { PdfViewer } from './PdfViewer'
 
 interface DashboardProps {
+  analysisData?: any
+  pdfUrl?: string
   onReset?: () => void
 }
 
-export function Dashboard({ onReset }: DashboardProps) {
+export function Dashboard({ analysisData, pdfUrl, onReset }: DashboardProps) {
+  const analysis = analysisData?.analysis || null;
+  
   return (
     <div className="h-screen w-full flex flex-col overflow-hidden bg-slate-100 font-sans">
       
       {/* Edge-to-Edge Top Navigation */}
-      <header className="h-[65px] w-full px-6 bg-white border-b border-slate-200 flex justify-between items-center shrink-0 z-20">
+      <header className="h-16.25 w-full px-6 bg-white border-b border-slate-200 flex justify-between items-center shrink-0 z-20">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-linear-to-tr from-indigo-600 to-violet-600 flex items-center justify-center text-white font-black text-sm">
             T
@@ -30,13 +35,13 @@ export function Dashboard({ onReset }: DashboardProps) {
         {/* ========================================= */}
         {/* LEFT SIDEBAR: Fixed width, flush to edges */}
         {/* ========================================= */}
-        <div className="w-[450px] shrink-0 bg-white border-r border-slate-200 h-full overflow-y-auto custom-scrollbar flex flex-col z-10">
+        <div className="w-112.5 shrink-0 bg-white border-r border-slate-200 h-full overflow-y-auto custom-scrollbar flex flex-col z-10">
           <div className="p-8 space-y-8">
             
             {/* Overall Score Dial */}
             <div className="flex flex-col items-center justify-center pt-4">
               <div className="w-32 h-32 rounded-full border-[8px] border-emerald-400 flex items-center justify-center mb-4 shadow-inner bg-slate-50">
-                <span className="text-5xl font-black text-slate-800 tracking-tighter">74</span>
+                <span className="text-5xl font-black text-slate-800 tracking-tighter">{analysis?.overallScore || 0}</span>
               </div>
               <span className="text-sm font-extrabold text-slate-400 uppercase tracking-widest">Overall Score</span>
             </div>
@@ -47,10 +52,10 @@ export function Dashboard({ onReset }: DashboardProps) {
             <div className="space-y-5">
               <h3 className="font-extrabold text-slate-800 text-lg">Category Scores</h3>
               {[
-                { name: 'Impact', score: 6.5, color: 'bg-amber-400' },
-                { name: 'Brevity', score: 9.0, color: 'bg-emerald-400' },
-                { name: 'Style', score: 4.5, color: 'bg-rose-400' },
-                { name: 'ATS Compatibility', score: 10.0, color: 'bg-emerald-400' }
+                { name: 'Impact', score: analysis?.categoryScores?.impact || 0, color: 'bg-amber-400' },
+                { name: 'Brevity', score: analysis?.categoryScores?.brevity || 0, color: 'bg-emerald-400' },
+                { name: 'Style', score: analysis?.categoryScores?.style || 0, color: 'bg-rose-400' },
+                { name: 'ATS Compatibility', score: analysis?.categoryScores?.ats || 0, color: 'bg-emerald-400' }
               ].map(cat => (
                 <div key={cat.name}>
                   <div className="flex justify-between text-xs mb-2 font-bold">
@@ -70,28 +75,30 @@ export function Dashboard({ onReset }: DashboardProps) {
             <div className="flex-1">
               <h3 className="font-extrabold text-slate-800 text-lg mb-5">Top Fixes</h3>
               <div className="space-y-4">
-                
-                <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl text-sm transition-colors hover:bg-rose-100/50 cursor-pointer">
-                  <span className="font-bold text-rose-700 block mb-1.5 text-xs uppercase tracking-wide">Weak Verb Detected</span>
-                  <span className="text-slate-700 leading-relaxed">
-                    You used the phrase <span className="font-bold text-rose-800 bg-rose-200/50 px-1 rounded">"Helped with"</span>. Replace it with a strong action verb like "Architected" or "Spearheaded".
-                  </span>
-                </div>
+                {analysis?.issues?.high?.map((issue: any, i: number) => (
+                  <div key={i} className="p-4 bg-rose-50 border border-rose-100 rounded-2xl text-sm transition-colors hover:bg-rose-100/50 cursor-pointer">
+                    <span className="font-bold text-rose-700 block mb-1.5 text-xs uppercase tracking-wide">{issue.type.replace(/_/g, ' ')}</span>
+                    <span className="text-slate-700 leading-relaxed">
+                      {issue.message} <span className="font-bold text-rose-800 bg-rose-200/50 px-1 rounded">"{issue.word || issue.context.substring(0,20) + '...'}"</span>. {issue.suggestedFix}
+                    </span>
+                  </div>
+                ))}
 
-                <div className="p-4 bg-amber-50 border border-amber-100 rounded-2xl text-sm transition-colors hover:bg-amber-100/50 cursor-pointer">
-                  <span className="font-bold text-amber-700 block mb-1.5 text-xs uppercase tracking-wide">Missing Metric</span>
-                  <span className="text-slate-700 leading-relaxed">
-                    Bullet point lacks numbers. Quantify your achievement to improve your impact score.
-                  </span>
-                </div>
+                {analysis?.issues?.medium?.map((issue: any, i: number) => (
+                  <div key={i} className="p-4 bg-amber-50 border border-amber-100 rounded-2xl text-sm transition-colors hover:bg-amber-100/50 cursor-pointer">
+                    <span className="font-bold text-amber-700 block mb-1.5 text-xs uppercase tracking-wide">{issue.type.replace(/_/g, ' ')}</span>
+                    <span className="text-slate-700 leading-relaxed">
+                      {issue.message} <span className="font-bold text-amber-800 bg-amber-200/50 px-1 rounded">"{issue.word || issue.context.substring(0,20) + '...'}"</span>. {issue.suggestedFix}
+                    </span>
+                  </div>
+                ))}
 
-                <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-2xl text-sm transition-colors hover:bg-indigo-100/50 cursor-pointer">
-                  <span className="font-bold text-indigo-700 block mb-1.5 text-xs uppercase tracking-wide">Buzzword</span>
-                  <span className="text-slate-700 leading-relaxed">
-                    Remove vague buzzword <span className="font-bold text-indigo-800 bg-indigo-200/50 px-1 rounded">"dynamic"</span>.
-                  </span>
-                </div>
-
+                {(!analysis?.issues?.high?.length && !analysis?.issues?.medium?.length) && (
+                   <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-2xl text-sm">
+                    <span className="font-bold text-emerald-700 block mb-1.5 text-xs uppercase tracking-wide">Looking Good</span>
+                    <span className="text-slate-700 leading-relaxed">No high or medium priority issues found!</span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -99,93 +106,33 @@ export function Dashboard({ onReset }: DashboardProps) {
         </div>
 
         {/* ========================================= */}
-        {/* RIGHT MAIN AREA: Resume HTML Viewer       */}
+        {/* RIGHT MAIN AREA: Actual PDF Viewer        */}
         {/* ========================================= */}
-        <div className="flex-1 h-full overflow-y-auto custom-scrollbar relative flex flex-col">
+        <div className="flex-1 h-full overflow-hidden bg-slate-200/60 relative flex flex-col">
           
           {/* Context Bar */}
-          <div className="w-full bg-slate-200/50 border-b border-slate-200 px-8 py-3 flex justify-between items-center shrink-0">
+          <div className="w-full bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-3 flex justify-between items-center shrink-0 shadow-sm z-10">
             <span className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-              ATS Parsed Text View
+              Original Document
             </span>
-            <span className="px-2.5 py-1 bg-indigo-100 text-indigo-700 rounded-md text-xs font-bold">Interactive Mode</span>
           </div>
 
-          {/* The "Paper" Container */}
-          <div className="p-8 pb-20 w-full flex justify-center">
-            <div className="w-full max-w-4xl bg-white shadow-2xl border border-slate-200 min-h-[1056px] p-12 sm:p-16 text-slate-800 font-serif leading-relaxed text-[15px]">
-              
-              {/* Header */}
-              <div className="text-center border-b-2 border-slate-800 pb-6 mb-8">
-                <h1 className="text-4xl font-black text-slate-900 mb-3 tracking-tight font-sans">SUBHENDU SINGH</h1>
-                <p className="text-sm font-sans font-medium text-slate-600 space-x-3">
-                  <span>+91 9907089230</span>
-                  <span>•</span> 
-                  <span>ssubhendu988@gmail.com</span>
-                  <span>•</span> 
-                  <span className="text-indigo-600 hover:underline cursor-pointer">linkedin.com/in/isubhendu</span>
+          {/* The Actual Highlighted PDF Viewer */}
+          <div className="flex-1 w-full h-full p-4 sm:p-8 pb-20 flex justify-center overflow-y-auto">
+            {pdfUrl ? (
+              <PdfViewer fileUrl={pdfUrl} issues={analysis?.issues} />
+            ) : (
+              <div className="w-full max-w-4xl h-[calc(100vh-140px)] flex flex-col items-center justify-center text-slate-400 bg-white shadow-xl border border-slate-200 rounded-xl">
+                <svg className="w-16 h-16 mb-4 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <p className="font-semibold text-slate-500">PDF Viewer Placeholder</p>
+                <p className="text-xs mt-2 text-slate-400 max-w-sm text-center">
+                  Upload a resume to see the live document.
                 </p>
               </div>
-
-              {/* Experience Section */}
-              <div className="mb-10">
-                <h2 className="text-lg font-bold text-slate-900 border-b border-slate-300 mb-4 pb-1 uppercase tracking-wider font-sans">Experience</h2>
-                
-                <div className="mb-6">
-                  <div className="flex justify-between font-bold text-slate-900 text-md font-sans">
-                    <span>Software Development Engineer I (Backend Lead)</span>
-                    <span className="text-sm text-slate-500">Sep 2025 - Present</span>
-                  </div>
-                  <div className="text-slate-600 font-sans font-medium text-sm mb-3 mt-1">Quantumcona LLP (Paymorz) — Hyderabad, India</div>
-                  
-                  <ul className="list-disc pl-6 space-y-3 font-sans">
-                    <li>
-                      Built and scaled a real-money fintech payment platform backend on Django + Supabase as the sole backend engineer, re-architecting a tightly-coupled codebase into an event-driven modular monolith and <span className="bg-emerald-100 text-emerald-900 px-1 rounded font-semibold border-b border-emerald-300">reducing system errors by ~60%</span>.
-                    </li>
-                    <li className="relative group">
-                      <span className="bg-rose-200/80 text-rose-900 px-1 rounded border-b-2 border-rose-500 font-bold cursor-help transition-colors hover:bg-rose-300">
-                        Helped with
-                      </span>
-                      {/* Tooltip */}
-                      <div className="absolute hidden group-hover:block bottom-full left-0 mb-2 w-64 p-3 bg-slate-900 text-white text-xs rounded-xl shadow-2xl z-50 font-sans leading-relaxed">
-                        <span className="font-bold text-rose-400 block mb-1 text-sm">Weak Verb</span>
-                        Replace this with a strong action verb (e.g., 'Architected', 'Spearheaded').
-                        <div className="absolute -bottom-1.5 left-6 w-3 h-3 bg-slate-900 transform rotate-45" />
-                      </div>
-                      {' '}the integration of Razorpay and Apple IAP with webhook handling and daily settlement reconciliation.
-                    </li>
-                    <li>
-                      Delivered subscriptions with promo codes, KYC (PAN/Aadhaar/GST), and automated invoice PDFs on GCS.
-                    </li>
-                    <li className="relative group">
-                      Built a{' '}
-                      <span className="bg-indigo-200/80 text-indigo-900 px-1 rounded border-b-2 border-indigo-500 font-bold cursor-help transition-colors hover:bg-indigo-300">
-                        dynamic
-                      </span>
-                      {/* Tooltip */}
-                      <div className="absolute hidden group-hover:block bottom-full left-10 mb-2 w-64 p-3 bg-slate-900 text-white text-xs rounded-xl shadow-2xl z-50 font-sans leading-relaxed">
-                        <span className="font-bold text-indigo-400 block mb-1 text-sm">Buzzword / Cliché</span>
-                        "Dynamic" is a vague buzzword. Replace it with a specific technical term.
-                        <div className="absolute -bottom-1.5 left-6 w-3 h-3 bg-slate-900 transform rotate-45" />
-                      </div>
-                      {' '}schema system for category listing forms, plus review/rating and multipart file upload.
-                    </li>
-                  </ul>
-                </div>
-              </div>
-
-              {/* Education Section */}
-              <div className="mb-10">
-                <h2 className="text-lg font-bold text-slate-900 border-b border-slate-300 mb-4 pb-1 uppercase tracking-wider font-sans">Education</h2>
-                <div className="flex justify-between font-bold text-slate-900 text-md font-sans">
-                  <span>Bengal College of Engineering and Technology</span>
-                  <span className="text-sm text-slate-500">July 2021 - July 2025</span>
-                </div>
-                <div className="text-slate-600 font-sans font-medium text-sm mt-1">Bachelor of Technology - Information Technology; CGPA: 8.51</div>
-              </div>
-
-            </div>
+            )}
           </div>
         </div>
 
