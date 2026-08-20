@@ -9,11 +9,47 @@ import { Hero } from './landing/Hero'
 import { UploadSection } from './landing/UploadSection'
 import { FeaturesSection } from './landing/FeaturesSection'
 import { StatusSection } from './landing/StatusSection'
+import { ResumeAnalysisView } from './ResumeAnalysisView'
 import { Footer } from './landing/Footer'
 
 export function LandingPage() {
   const [activeTab, setActiveTab] = useState<'upload' | 'features' | 'status'>('upload')
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null)
+  const [isAnalysisView, setIsAnalysisView] = useState<boolean>(false)
+
   const { data: apiStatus, isLoading: isApiLoading, isError: isApiError, refetch } = useServerHealth()
+
+  const handleUploadSuccess = (file: File) => {
+    setUploadedFile(file)
+    setIsAnalysisView(true)
+  }
+
+  const handleResetToLanding = () => {
+    setUploadedFile(null)
+    setIsAnalysisView(false)
+    setActiveTab('upload')
+  }
+
+  // Entirely separate full page layout after uploading / entering analysis mode
+  if (isAnalysisView || activeTab === 'status') {
+    return (
+      <div className="min-h-screen w-full bg-slate-50 text-slate-900 flex flex-col justify-between relative overflow-hidden font-sans">
+        <div className="absolute inset-0 bg-grid-light opacity-80 pointer-events-none" />
+        <div className="absolute -top-25 left-1/2 -translate-x-1/2 w-225 h-125 bg-linear-to-tr from-indigo-200/50 via-purple-100/40 to-blue-200/50 blur-3xl pointer-events-none rounded-full mask-spotlight animate-float" />
+        
+        <Nav activeTab={activeTab} setActiveTab={(tab) => {
+          if (tab !== 'status') setIsAnalysisView(false)
+          setActiveTab(tab)
+        }} />
+
+        <main className="relative z-10 w-full max-w-7xl mx-auto px-6 py-8 flex-1 flex flex-col justify-start">
+          <ResumeAnalysisView file={uploadedFile} onReset={handleResetToLanding} />
+        </main>
+
+        <Footer />
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen w-full bg-slate-50 text-slate-900 flex flex-col justify-between relative overflow-hidden font-sans">
@@ -27,16 +63,27 @@ export function LandingPage() {
 
       <Nav activeTab={activeTab} setActiveTab={setActiveTab} />
 
-      <main className="relative z-10 w-full max-w-5xl mx-auto px-6 py-12 flex-1 flex flex-col items-center justify-center">
-        <Hero 
-          isApiLoading={isApiLoading} 
-          isApiError={isApiError} 
-          apiStatus={apiStatus} 
-        />
-
-        {activeTab === 'upload' && <UploadSection />}
-        {activeTab === 'features' && <FeaturesSection />}
-        {activeTab === 'status' && <StatusSection apiStatus={apiStatus} refetch={refetch} />}
+      <main className="relative z-10 w-full max-w-7xl mx-auto px-6 py-12 flex-1 flex flex-col items-center justify-center">
+        {activeTab === 'upload' && (
+          <>
+            <Hero 
+              isApiLoading={isApiLoading} 
+              isApiError={isApiError} 
+              apiStatus={apiStatus} 
+            />
+            <UploadSection onUploadSuccess={handleUploadSuccess} />
+          </>
+        )}
+        {activeTab === 'features' && (
+          <>
+            <Hero 
+              isApiLoading={isApiLoading} 
+              isApiError={isApiError} 
+              apiStatus={apiStatus} 
+            />
+            <FeaturesSection />
+          </>
+        )}
       </main>
 
       <Footer />

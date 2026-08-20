@@ -1,13 +1,15 @@
-'use client'
-
 import { useState } from 'react'
 import { useFileUpload } from '../../hooks/useFileUpload'
 import { Dropzone } from '@repo/ui/dropzone'
 
 const ALLOWED_EXTENSIONS = ['.pdf', '.docx', '.doc']
-const MAX_FILE_SIZE_MB = 10
+const MAX_FILE_SIZE_MB = 2
 
-export function UploadSection() {
+interface UploadSectionProps {
+  onUploadSuccess?: (uploadedFile: File) => void
+}
+
+export function UploadSection({ onUploadSuccess }: UploadSectionProps) {
   const [file, setFile] = useState<File | null>(null)
   const [validationError, setValidationError] = useState<string | null>(null)
 
@@ -56,6 +58,9 @@ export function UploadSection() {
           tags: ['Resume'],
         },
       })
+      if (onUploadSuccess) {
+        onUploadSuccess(file)
+      }
     } catch {
       // Error handled by useFileUpload hook
     }
@@ -69,37 +74,7 @@ export function UploadSection() {
 
   return (
     <div className="w-full max-w-xl mx-auto bg-white/90 backdrop-blur-xl border border-slate-200/90 rounded-3xl p-7 shadow-xl shadow-indigo-500/5 transition-all duration-300">
-      {/* Success State */}
-      {step === 'success' ? (
-        <div className="text-center py-6">
-          <div className="w-16 h-16 bg-emerald-50 border border-emerald-200 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl shadow-xs animate-bounce">
-            ✓
-          </div>
-          <h3 className="text-xl font-extrabold text-slate-900 mb-1">Resume Scanned!</h3>
-          <p className="text-slate-500 text-sm mb-6">
-            The candidate file was uploaded to MinIO storage and verified by TalentLens.
-          </p>
-
-          <div className="bg-slate-50/80 border border-slate-200/80 rounded-2xl p-4 text-left text-xs mb-6 space-y-2 font-mono">
-            <div className="flex justify-between">
-              <span className="text-slate-500">File Name:</span>
-              <span className="font-semibold text-slate-800 truncate max-w-60">{file?.name}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-slate-500">Status:</span>
-              <span className="font-semibold text-emerald-600">Verified in MinIO Storage</span>
-            </div>
-          </div>
-
-          <button
-            onClick={handleResetAll}
-            className="w-full py-3.5 px-6 rounded-2xl font-bold text-sm bg-slate-900 hover:bg-slate-800 text-white shadow-md transition-all active:scale-[0.98] cursor-pointer"
-          >
-            Scan Another Document
-          </button>
-        </div>
-      ) : (
-        <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-6">
           <div className="flex items-center justify-between border-b border-slate-100 pb-4">
             <div>
               <h3 className="text-lg font-extrabold text-slate-900 tracking-tight">Scan Resume Document</h3>
@@ -172,7 +147,6 @@ export function UploadSection() {
             </button>
           </div>
         </form>
-      )}
     </div>
   )
 }
