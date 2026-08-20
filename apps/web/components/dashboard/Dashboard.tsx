@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { Button } from '../ui/button'
 import dynamic from 'next/dynamic'
 
@@ -25,6 +25,36 @@ interface DashboardProps {
 
 export function Dashboard({ analysisData, pdfUrl, onReset }: DashboardProps) {
   const analysis = analysisData?.analysis || null;
+  const [activeCategory, setActiveCategory] = useState<string>('Impact')
+  
+  const allIssues = [
+    ...(analysis?.issues?.high || []),
+    ...(analysis?.issues?.medium || []),
+    ...(analysis?.issues?.low || [])
+  ];
+
+  const CATEGORY_MAP: Record<string, string> = {
+    "MISSING_METRIC": "Impact",
+    "WEAK_VERB": "Impact",
+    "BUZZWORD": "Style",
+    "PERSONAL_PRONOUN": "Style",
+    "REPETITION": "Style",
+    "FILLER_WORD": "Brevity",
+    "BULLET_TOO_LONG": "Brevity",
+    "BULLET_TOO_SHORT": "Brevity",
+    "SPELLING": "Spelling",
+    "MISSING_SECTION": "ATS Compatibility",
+    "MISSING_CONTACT": "ATS Compatibility"
+  };
+
+  const availableCategories = Array.from(new Set(allIssues.map((issue: any) => CATEGORY_MAP[issue.type] || 'Other')));
+  
+  // If current category isn't available, default to the first one available
+  if (allIssues.length > 0 && !availableCategories.includes(activeCategory)) {
+    setActiveCategory(availableCategories[0] as string);
+  }
+
+  const activeIssues = allIssues.filter((issue: any) => CATEGORY_MAP[issue.type] === activeCategory);
   
   return (
     <div className="h-screen w-full flex flex-col overflow-hidden bg-slate-100 font-sans">
@@ -50,7 +80,7 @@ export function Dashboard({ analysisData, pdfUrl, onReset }: DashboardProps) {
         {/* ========================================= */}
         {/* LEFT SIDEBAR: Fixed width, flush to edges */}
         {/* ========================================= */}
-        <div className="w-112.5 shrink-0 bg-white border-r border-slate-200 h-full overflow-y-auto custom-scrollbar flex flex-col z-10">
+        <div className="w-1/2 max-w-[800px] shrink-0 bg-white border-r border-slate-200 h-full overflow-y-auto custom-scrollbar flex flex-col z-10">
           <div className="p-8 space-y-8">
             
             {/* Overall Score Dial */}
@@ -88,42 +118,67 @@ export function Dashboard({ analysisData, pdfUrl, onReset }: DashboardProps) {
 
             {/* Top Fixes List */}
             <div className="flex-1">
-              <h3 className="font-extrabold text-slate-800 text-lg mb-5">Top Fixes</h3>
-              <div className="space-y-4">
-                {analysis?.issues?.high?.map((issue: any, i: number) => (
-                  <div key={i} className="p-4 bg-rose-50 border border-rose-100 rounded-2xl text-sm transition-colors hover:bg-rose-100/50 cursor-pointer">
-                    <span className="font-bold text-rose-700 block mb-1.5 text-xs uppercase tracking-wide">{issue.type.replace(/_/g, ' ')}</span>
-                    <span className="text-slate-700 leading-relaxed">
-                      {issue.message} <span className="font-bold text-rose-800 bg-rose-200/50 px-1 rounded">"{issue.word || issue.context.substring(0,20) + '...'}"</span>. {issue.suggestedFix}
-                    </span>
-                  </div>
-                ))}
+              <div className="flex flex-col gap-3 mb-5">
+                <h3 className="font-extrabold text-slate-800 text-lg">Fixes by Category</h3>
+                
+                {/* Dynamic Category Tabs */}
+                <div className="flex flex-wrap gap-2">
+                  {availableCategories.length > 0 ? availableCategories.map(cat => (
+                    <button 
+                      key={cat}
+                      onClick={() => setActiveCategory(cat as string)} 
+                      className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-colors border ${
+                        activeCategory === cat 
+                          ? 'bg-indigo-50 text-indigo-700 border-indigo-200 shadow-xs' 
+                          : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                      }`}
+                    >
+                      {cat as string}
+                    </button>
+                  )) : (
+                    <span className="text-sm text-emerald-600 font-bold">No issues found!</span>
+                  )}
+                </div>
+              </div>
 
-                {analysis?.issues?.medium?.map((issue: any, i: number) => (
-                  <div key={i} className="p-4 bg-amber-50 border border-amber-100 rounded-2xl text-sm transition-colors hover:bg-amber-100/50 cursor-pointer">
-                    <span className="font-bold text-amber-700 block mb-1.5 text-xs uppercase tracking-wide">{issue.type.replace(/_/g, ' ')}</span>
-                    <span className="text-slate-700 leading-relaxed">
-                      {issue.message} <span className="font-bold text-amber-800 bg-amber-200/50 px-1 rounded">"{issue.word || issue.context.substring(0,20) + '...'}"</span>. {issue.suggestedFix}
-                    </span>
-                  </div>
-                ))}
-
-                {(!analysis?.issues?.high?.length && !analysis?.issues?.medium?.length) && (
-                   <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-2xl text-sm">
+              <div className="space-y-4 pr-2">
+                {activeIssues.length > 0 ? activeIssues.map((issue: any, i: number) => {
+                  // Safely map Tailwind classes to avoid purge issues based on SEVERITY, not tab
+                  const styles = {
+                    HIGH: { bg: 'bg-rose-50', border: 'border-rose-100', hover: 'hover:bg-rose-100/50', text: 'text-rose-700', textBold: 'text-rose-800 bg-rose-200/50' },
+                    MEDIUM: { bg: 'bg-amber-50', border: 'border-amber-100', hover: 'hover:bg-amber-100/50', text: 'text-amber-700', textBold: 'text-amber-800 bg-amber-200/50' },
+                    LOW: { bg: 'bg-indigo-50', border: 'border-indigo-100', hover: 'hover:bg-indigo-100/50', text: 'text-indigo-700', textBold: 'text-indigo-800 bg-indigo-200/50' }
+                  }[issue.severity as 'HIGH'|'MEDIUM'|'LOW'] || { bg: 'bg-indigo-50', border: 'border-indigo-100', hover: 'hover:bg-indigo-100/50', text: 'text-indigo-700', textBold: 'text-indigo-800 bg-indigo-200/50' };
+                  
+                  return (
+                    <div key={i} className={`p-5 ${styles.bg} border ${styles.border} rounded-2xl text-sm transition-colors ${styles.hover} cursor-pointer`}>
+                      <span className={`font-bold ${styles.text} block mb-2 text-xs uppercase tracking-wide`}>
+                        {issue.type.replace(/_/g, ' ')}
+                      </span>
+                      <span className="text-slate-700 leading-relaxed block break-words">
+                        {issue.message} 
+                        {issue.word && (
+                          <> <span className={`font-bold ${styles.textBold} px-1 rounded`}>"{issue.word}"</span>.</>
+                        )}
+                        {issue.suggestedFix && ` ${issue.suggestedFix}`}
+                      </span>
+                    </div>
+                  )
+                }) : (
+                  <div className="p-5 bg-emerald-50 border border-emerald-100 rounded-2xl text-sm">
                     <span className="font-bold text-emerald-700 block mb-1.5 text-xs uppercase tracking-wide">Looking Good</span>
-                    <span className="text-slate-700 leading-relaxed">No high or medium priority issues found!</span>
+                    <span className="text-slate-700 leading-relaxed">No issues in the {activeCategory} category!</span>
                   </div>
                 )}
               </div>
             </div>
-
           </div>
         </div>
 
         {/* ========================================= */}
         {/* RIGHT MAIN AREA: Actual PDF Viewer        */}
         {/* ========================================= */}
-        <div className="flex-1 h-full overflow-hidden bg-slate-200/60 relative flex flex-col">
+        <div className="w-1/2 flex-1 h-full overflow-hidden bg-slate-200/60 relative flex flex-col">
           
           {/* Context Bar */}
           <div className="w-full bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-3 flex justify-between items-center shrink-0 shadow-sm z-10">
@@ -136,7 +191,7 @@ export function Dashboard({ analysisData, pdfUrl, onReset }: DashboardProps) {
           {/* The Actual Highlighted PDF Viewer */}
           <div className="flex-1 w-full h-full p-4 sm:p-8 pb-20 flex justify-center overflow-y-auto">
             {pdfUrl ? (
-              <PdfViewer fileUrl={pdfUrl} issues={analysis?.issues} />
+              <PdfViewer fileUrl={pdfUrl} activeHighlights={activeIssues} />
             ) : (
               <div className="w-full max-w-4xl h-[calc(100vh-140px)] flex flex-col items-center justify-center text-slate-400 bg-white shadow-xl border border-slate-200 rounded-xl">
                 <svg className="w-16 h-16 mb-4 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">

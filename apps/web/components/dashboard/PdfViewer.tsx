@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { Document, Page, pdfjs } from 'react-pdf'
 import Mark from 'mark.js'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
@@ -11,10 +11,10 @@ pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/b
 
 interface PdfViewerProps {
   fileUrl: string
-  issues?: any
+  activeHighlights?: any[]
 }
 
-export function PdfViewer({ fileUrl, issues }: PdfViewerProps) {
+export function PdfViewer({ fileUrl, activeHighlights }: PdfViewerProps) {
   const [numPages, setNumPages] = useState<number>()
   const viewerRef = useRef<HTMLDivElement>(null)
 
@@ -24,10 +24,8 @@ export function PdfViewer({ fileUrl, issues }: PdfViewerProps) {
 
   // The Magic "Resume Worded" Highlighter
   const applyHighlights = useCallback(() => {
-    if (!viewerRef.current || !issues) return;
+    if (!viewerRef.current) return;
 
-    // Add a tiny delay because onRenderSuccess sometimes fires a millisecond 
-    // before React fully attaches the text layer spans to the DOM
     setTimeout(() => {
       const textLayers = viewerRef.current?.querySelectorAll('.react-pdf__Page__textContent');
       if (!textLayers) return;
@@ -35,34 +33,35 @@ export function PdfViewer({ fileUrl, issues }: PdfViewerProps) {
       textLayers.forEach(layer => {
         const marker = new Mark(layer as HTMLElement);
         
+        // ALWAYS clear previous marks when the category tab changes
         marker.unmark(); 
 
-        // Helper to mark issues
-        const markIssues = (issueList: any[], colorClass: string) => {
-          if (!issueList) return;
-          issueList.forEach((issue: any) => {
-            // If it's a specific word (buzzword), highlight the word.
-            // If it's a sentence-level issue (missing metric), highlight the whole sentence.
-            const textToHighlight = issue.word || issue.context;
-            
-            if (textToHighlight) {
-              marker.mark(textToHighlight, {
-                className: `${colorClass} cursor-help transition-colors mix-blend-multiply`,
-                accuracy: 'partially',
-                acrossElements: true,
-                separateWordSearch: false // CRITICAL: Don't highlight individual words of a sentence everywhere
-              });
-            }
-          });
-        };
+        if (!activeHighlights) return;
 
-        // Tailwind highlighting classes (using mix-blend-multiply so the black PDF text shows through the highlight)
-        markIssues(issues.high, 'bg-rose-300/60 text-transparent border-b-2 border-rose-500');
-        markIssues(issues.medium, 'bg-amber-300/60 text-transparent border-b-2 border-amber-500');
-        markIssues(issues.low, 'bg-indigo-300/60 text-transparent border-b-2 border-indigo-500');
+        activeHighlights.forEach((issue: any) => {
+          if (issue.word) {
+            // Determine color based on severity
+            let colorClass = 'bg-indigo-300/60 border-indigo-500';
+            if (issue.severity === 'HIGH') colorClass = 'bg-rose-300/60 border-rose-500';
+            if (issue.severity === 'MEDIUM') colorClass = 'bg-amber-300/60 border-amber-500';
+
+            marker.mark(issue.word, {
+              className: `${colorClass} text-transparent border-b-2 font-bold cursor-help transition-colors mix-blend-multiply`,
+              accuracy: 'partially',
+              acrossElements: true,
+              separateWordSearch: false
+            });
+          }
+        });
       });
-    }, 150); // 150ms DOM paint buffer
-  }, [issues]);
+    }, 150);
+  }, [activeHighlights]);
+
+  // CRITICAL FIX: The PDF text layer only renders once. 
+  // We MUST use a useEffect to re-run the highlighter whenever the user clicks a different tab!
+  useEffect(() => {
+    applyHighlights();
+  }, [applyHighlights]);
 
   return (
     <div className="w-full flex flex-col items-center" ref={viewerRef}>
