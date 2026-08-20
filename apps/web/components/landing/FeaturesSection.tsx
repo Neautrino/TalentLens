@@ -1,5 +1,5 @@
 import React from 'react'
-import { Card } from '@repo/ui/card'
+import { Card } from '../ui/card'
 
 export function FeaturesSection() {
   return (

@@ -1,5 +1,5 @@
 import React from 'react'
-import { Button } from '@repo/ui/button'
+import { Button } from './ui/button'
 
 interface DashboardProps {
   onReset?: () => void

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useFileUpload } from '../../hooks/useFileUpload'
-import { Dropzone } from '@repo/ui/dropzone'
+import { Dropzone } from '../ui/dropzone'
 
 const ALLOWED_EXTENSIONS = ['.pdf', '.docx', '.doc']
 const MAX_FILE_SIZE_MB = 2
