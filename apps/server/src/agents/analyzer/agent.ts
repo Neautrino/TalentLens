@@ -1,21 +1,22 @@
 import { Agent, run } from "@openai/agents";
+import { configureLlm, isReasoningModel } from "../../lib/llm";
+import { modelFor } from "../../config/llm";
 import { prompt } from "./prompt";
 import { ResumeAnalyzerOutputSchema, type ResumeAnalyzerOutput } from "./schema";
 import { validateAnalysis, type ValidationReport } from "./validate";
 
-const MODEL = process.env.ANALYZER_MODEL || "gpt-5-nano-2025-08-07";
-
-// GPT-5 and o-series reasoning models reject `temperature` outright - they only
-// run at the default. Everything else gets 0, because the score is derived from
-// these findings and a number that moves between runs on the same resume reads
-// as broken.
-const isReasoningModel = /^(gpt-5|o[1-9])/.test(MODEL);
+// Provider and model come from config/llm.ts.
+configureLlm();
+const MODEL = modelFor("analyzer");
 
 const analyzerAgent = new Agent({
   name: "Resume Analyzer",
   instructions: prompt,
   model: MODEL,
-  modelSettings: isReasoningModel
+  // Reasoning models reject `temperature`. Everything else gets 0, because the
+  // score is derived from these findings and a number that moves between runs
+  // on the same resume reads as broken.
+  modelSettings: isReasoningModel(MODEL)
     ? { reasoning: { effort: "low" } }
     : { temperature: 0 },
   outputType: ResumeAnalyzerOutputSchema,
