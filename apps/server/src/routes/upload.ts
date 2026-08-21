@@ -7,6 +7,7 @@ import { FileRecord, getFileRecord, setActiveJobRecord, setFileRecord } from "..
 import { extractBasicInfo, extractTextFromBuffer } from "../lib/parser";
 import { analyzeResume } from "../analyzer/engine";
 import { analyzeLength } from "../analyzer/length";
+import { analyzeResumeWithAgent, toAiAnalysis } from "../agents/analyzer/agent";
 export const uploadRouter = new Hono()
 
 const ALLOWED_FILE_TYPES = [
@@ -126,6 +127,10 @@ uploadRouter.post('/complete', validateJson(completeUploadSchema), async (c) => 
         record.status = 'parsed'
 
         setFileRecord(record)
+
+        const agentResult = await analyzeResumeWithAgent({ rawText, hyperlinks: parsed.hyperlinks })
+        record.aiAnalysis = toAiAnalysis(agentResult)
+        setFileRecord(record)
     } catch (error) {
         console.error(`Parsing failed for ${body.fileId}:`, error)
         record.status = 'failed'
@@ -138,7 +143,8 @@ uploadRouter.post('/complete', validateJson(completeUploadSchema), async (c) => 
             fileId: body.fileId,
             fileName: record.fileName,
             parsedData: record.parsedData,
-            analysis: record.analysisResult
+            analysis: record.analysisResult,
+            aiAnalysis: record.aiAnalysis
         },
         message: 'Upload completed successfully',
         statusCode: 200
@@ -171,7 +177,8 @@ uploadRouter.get('/analysis/:fileId', async (c) => {
             fileId: record.fileId,
             fileName: record.fileName,
             parsedData: record.parsedData,
-            analysis: record.analysisResult
+            analysis: record.analysisResult,
+            aiAnalysis: record.aiAnalysis
         },
         message: 'Analysis retrieved successfully',
         statusCode: 200

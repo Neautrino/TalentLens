@@ -1,4 +1,5 @@
 import { AnalysisResult } from "../analyzer/engine"
+import { AiAnalysis } from "../agents/analyzer/agent"
 
 export interface FileRecord {
     fileId: string
@@ -17,6 +18,7 @@ export interface FileRecord {
         phone?: string | null
     }
     analysisResult?: AnalysisResult
+    aiAnalysis?: AiAnalysis
 }
 
 export interface JobRecord {

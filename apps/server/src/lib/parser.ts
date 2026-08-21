@@ -5,6 +5,14 @@ export interface ParsedResumeResult {
     rawText: string
     pageCount: number | null
     pages: string[]
+    /**
+     * Real hyperlink targets embedded in the document. Extracted text carries
+     * only the visible label, so a resume showing "Portfolio" or
+     * "linkedin.com/in/x" hides the actual href. These are the true
+     * destinations - the enrichment pipeline needs them and the model should
+     * never have to guess them.
+     */
+    hyperlinks: Array<{ text: string; url: string }>
     metadata?: {
         name?: string | null
         email?: string | null
@@ -12,18 +20,40 @@ export interface ParsedResumeResult {
     }
 }
 
+function dedupeLinks(links: Array<{ text: string; url: string }>) {
+    const seen = new Map<string, { text: string; url: string }>()
+    for (const link of links) {
+        if (!link?.url) continue
+        if (!seen.has(link.url)) seen.set(link.url, { text: link.text?.trim() ?? "", url: link.url })
+    }
+    return [...seen.values()]
+}
+
 export async function extractTextFromBuffer(buffer:Buffer, fileType: string): Promise<ParsedResumeResult> {
     if(fileType.toLowerCase() === "application/pdf") {
         const uint8Array = new Uint8Array(buffer)
-        const pdfData = await new PDFParse(uint8Array).getText()
+        const parser = new PDFParse(uint8Array)
+        const pdfData = await parser.getText()
+
+        // Link annotations live outside the text layer, so they need a second
+        // pass. A failure here must not lose the text we already have.
+        let hyperlinks: Array<{ text: string; url: string }> = []
+        try {
+            const info = await parser.getInfo({ parsePageInfo: true })
+            hyperlinks = dedupeLinks((info.pages ?? []).flatMap(page => page.links ?? []))
+        } catch (error) {
+            console.error('[Parser] Could not read hyperlinks:', error)
+        }
+
         return {
             rawText: pdfData.text,
             pageCount: pdfData.total,
-            pages: pdfData.pages.map(page => page.text)
+            pages: pdfData.pages.map(page => page.text),
+            hyperlinks
         }
     } else if (fileType.toLowerCase() === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || fileType.toLowerCase() === 'application/msword') {
         const docResult = await mammoth.extractRawText({buffer})
-        return { rawText: docResult.value, pageCount: null, pages: [] }
+        return { rawText: docResult.value, pageCount: null, pages: [], hyperlinks: [] }
     } else {
         console.error(`[Parser] Unsupported file type encountered: "${fileType}"`)
         throw new Error(`Unsupported file type for parsing: ${fileType}`)
