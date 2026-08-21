@@ -3,6 +3,8 @@ import { PDFParse } from "pdf-parse"
 
 export interface ParsedResumeResult {
     rawText: string
+    pageCount: number | null
+    pages: string[]
     metadata?: {
         name?: string | null
         email?: string | null
@@ -10,14 +12,18 @@ export interface ParsedResumeResult {
     }
 }
 
-export async function extractTextFromBuffer(buffer:Buffer, fileType: string): Promise<string> {
+export async function extractTextFromBuffer(buffer:Buffer, fileType: string): Promise<ParsedResumeResult> {
     if(fileType.toLowerCase() === "application/pdf") {
         const uint8Array = new Uint8Array(buffer)
         const pdfData = await new PDFParse(uint8Array).getText()
-        return pdfData.text
+        return {
+            rawText: pdfData.text,
+            pageCount: pdfData.total,
+            pages: pdfData.pages.map(page => page.text)
+        }
     } else if (fileType.toLowerCase() === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || fileType.toLowerCase() === 'application/msword') {
         const docResult = await mammoth.extractRawText({buffer})
-        return docResult.value
+        return { rawText: docResult.value, pageCount: null, pages: [] }
     } else {
         console.error(`[Parser] Unsupported file type encountered: "${fileType}"`)
         throw new Error(`Unsupported file type for parsing: ${fileType}`)

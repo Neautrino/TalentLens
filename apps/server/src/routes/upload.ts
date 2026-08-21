@@ -6,6 +6,7 @@ import { sendError, sendSuccess } from "../lib/apiResponse";
 import { FileRecord, getFileRecord, setActiveJobRecord, setFileRecord } from "../store/store";
 import { extractBasicInfo, extractTextFromBuffer } from "../lib/parser";
 import { analyzeResume } from "../analyzer/engine";
+import { analyzeLength } from "../analyzer/length";
 export const uploadRouter = new Hono()
 
 const ALLOWED_FILE_TYPES = [
@@ -112,15 +113,18 @@ uploadRouter.post('/complete', validateJson(completeUploadSchema), async (c) => 
 
     try {
         const buffer = await getObjectBuffer(body.objectKey)
-        const rawText = await extractTextFromBuffer(buffer, record.fileType)
+        const parsed = await extractTextFromBuffer(buffer, record.fileType)
+        const rawText = parsed.rawText
         const parsedData = extractBasicInfo(rawText)
         const analysisResult = analyzeResume(rawText);
+
+        console.log('[Length]', analyzeLength(parsed))
+
         record.rawText = rawText
         record.parsedData = parsedData
         record.analysisResult = analysisResult
         record.status = 'parsed'
 
-        console.log(analysisResult)
         setFileRecord(record)
     } catch (error) {
         console.error(`Parsing failed for ${body.fileId}:`, error)
