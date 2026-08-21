@@ -42,7 +42,6 @@ export function Dashboard({ analysisData, pdfUrl, onReset }: DashboardProps) {
     "FILLER_WORD": "Brevity",
     "BULLET_TOO_LONG": "Brevity",
     "BULLET_TOO_SHORT": "Brevity",
-    "SPELLING": "Spelling",
     "MISSING_SECTION": "ATS Compatibility",
     "MISSING_CONTACT": "ATS Compatibility"
   };

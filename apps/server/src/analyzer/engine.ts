@@ -4,24 +4,9 @@ import {
   METRIC_PATTERNS, 
   PRONOUNS, 
   WEAK_STARTERS, 
-  SECTION_ALIASES,
-  TECH_WHITELIST
+  SECTION_ALIASES
 } from "./rules";
 import { extractBulletPoints, extractContactInfo } from "./parserUtils";
-import fs from 'fs';
-import path from 'path';
-import nspell from 'nspell';
-
-// Initialize spellchecker synchronously once at startup
-let spellchecker: nspell | null = null;
-try {
-  const dictPath = require.resolve('dictionary-en');
-  const aff = fs.readFileSync(path.join(path.dirname(dictPath), 'index.aff'), 'utf-8');
-  const dic = fs.readFileSync(path.join(path.dirname(dictPath), 'index.dic'), 'utf-8');
-  spellchecker = nspell(aff, dic);
-} catch (e) {
-  console.error("[Analyzer] Failed to load dictionary-en:", e);
-}
 
 export interface HighlightedIssue {
   type: string;
@@ -189,27 +174,6 @@ export function analyzeResume(rawText: string): AnalysisResult {
         context: bullet.text,
         suggestedFix: "Split this into two separate bullet points."
       });
-    }
-
-    // G. Spelling Check (Deterministic)
-    if (spellchecker) {
-      // Strip punctuation and split by spaces
-      const words = textLower.replace(/[^\w\s-]/g, ' ').split(/\s+/);
-      for (const word of words) {
-        // Ignore short words, numbers, and things in our tech whitelist
-        if (word.length > 2 && !/^\d+$/.test(word) && !TECH_WHITELIST.includes(word)) {
-          if (!spellchecker.correct(word)) {
-            allIssues.push({
-              type: "SPELLING",
-              severity: "MEDIUM",
-              message: "Possible spelling mistake detected.",
-              context: bullet.text,
-              word: word,
-              suggestedFix: "Review this word for typos."
-            });
-          }
-        }
-      }
     }
   }
 
