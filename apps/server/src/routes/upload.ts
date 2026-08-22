@@ -119,8 +119,6 @@ uploadRouter.post('/complete', validateJson(completeUploadSchema), async (c) => 
         const parsedData = extractBasicInfo(rawText)
         const analysisResult = analyzeResume(rawText);
 
-        console.log('[Length]', analyzeLength(parsed))
-
         record.rawText = rawText
         record.parsedData = parsedData
         record.analysisResult = analysisResult
@@ -128,9 +126,9 @@ uploadRouter.post('/complete', validateJson(completeUploadSchema), async (c) => 
 
         setFileRecord(record)
 
-        const agentResult = await analyzeResumeWithAgent({ rawText, hyperlinks: parsed.hyperlinks })
-        record.aiAnalysis = toAiAnalysis(agentResult)
-        setFileRecord(record)
+        // const agentResult = await analyzeResumeWithAgent({ rawText, hyperlinks: parsed.hyperlinks })
+        // record.aiAnalysis = toAiAnalysis(agentResult)
+        // setFileRecord(record)
     } catch (error) {
         console.error(`Parsing failed for ${body.fileId}:`, error)
         record.status = 'failed'
@@ -144,7 +142,7 @@ uploadRouter.post('/complete', validateJson(completeUploadSchema), async (c) => 
             fileName: record.fileName,
             parsedData: record.parsedData,
             analysis: record.analysisResult,
-            aiAnalysis: record.aiAnalysis
+            // aiAnalysis: record.aiAnalysis
         },
         message: 'Upload completed successfully',
         statusCode: 200
