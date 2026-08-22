@@ -13,9 +13,8 @@ const analyzerAgent = new Agent({
   name: "Resume Analyzer",
   instructions: prompt,
   model: MODEL,
-  // Reasoning models reject `temperature`. Everything else gets 0, because the
-  // score is derived from these findings and a number that moves between runs
-  // on the same resume reads as broken.
+  // Reasoning models reject `temperature`; everything else gets 0 so the same
+  // resume produces the same analysis.
   modelSettings: isReasoningModel(MODEL)
     ? { reasoning: { effort: "low" } }
     : { temperature: 0 },
@@ -27,13 +26,8 @@ export type AnalyzerResult =
   | { ok: false; reason: "not_a_resume"; output: ResumeAnalyzerOutput }
   | { ok: false; reason: "failed"; error: string };
 
-/**
- * The client-facing shape of an agent run.
- *
- * Deliberately not AnalyzerResult: a failure there carries the raw provider
- * error, which can name models, endpoints and quota details. That belongs in
- * the server log, not in an HTTP response.
- */
+// Client-facing shape. Deliberately not AnalyzerResult: a failure there carries
+// the raw provider error, which names models and endpoints.
 export type AiAnalysis =
   | {
       status: "completed";
@@ -54,8 +48,7 @@ export function toAiAnalysis(result: AnalyzerResult): AiAnalysis {
       basicInfo: result.output.basicInfo,
       links: result.output.links,
       analysis: result.output.analysis,
-      // A count, not the quotes themselves - it is a quality signal for us, not
-      // something the candidate can act on.
+      // A count, not the quotes - a quality signal for us, not the candidate.
       droppedQuotes: result.droppedQuotes.length,
     };
   }
@@ -75,12 +68,11 @@ export interface AnalyzerInput {
 function buildInput({ rawText, hyperlinks = [] }: AnalyzerInput): string {
   const parts: string[] = [];
 
-  // The model has no clock. Without this it treats every recent date as being
-  // in the future and reports working roles as timeline errors.
+  // The model has no clock; without this it reports current roles as
+  // future-dated.
   parts.push(`<today>${new Date().toISOString().slice(0, 10)}</today>`);
 
-  // Extracted text keeps only the visible label of a link, so the real targets
-  // are supplied separately rather than left to be inferred.
+  // Extracted text keeps only the visible label, so real targets go separately.
   if (hyperlinks.length > 0) {
     const list = hyperlinks.map(link => `${link.text || "(no label)"} -> ${link.url}`).join("\n");
     parts.push(`<hyperlinks>\n${list}\n</hyperlinks>`);

@@ -1,24 +1,15 @@
 import { z } from "zod";
 
-// The model never emits numbers. It reports findings; the scoring engine counts
-// them. Keeping integers out of this schema is what makes the score auditable
-// and stable across runs on the same resume.
+// The model emits no numbers. It reports issues; the scoring engine counts
+// them. That is what keeps the score auditable and stable between runs.
 
 export const CheckStatus = z.enum(["good", "moderate", "warning", "critical"]);
 
 export const Severity = z.enum(["high", "medium", "low"]);
 
-/**
- * An issue anchored to text copied out of the resume.
- *
- * `quote` is characters copied from the resume, never a description of them.
- * It is what the PDF highlighter marks, and what validation checks - an issue
- * whose quote cannot be located is dropped rather than shown pointing at
- * nothing.
- *
- * No length constraint here on purpose: OpenAI strict structured output rejects
- * keywords like minLength. Emptiness is enforced in validate.ts instead.
- */
+// `quote` is characters copied from the resume, never a description of them.
+// No length constraint: strict structured output rejects minLength, so
+// emptiness is enforced in validate.ts.
 const AnchoredIssue = z.object({
   quote: z.string(),
   severity: Severity,
@@ -38,10 +29,8 @@ const DocumentIssue = z.object({
   suggestion: z.string(),
 });
 
-// `issues` holds problems only - it is the number the scoring engine counts, so
-// anything positive in here would penalise a good resume. `note` is where a
-// passing check says why it passed, which is what the UI renders as a green
-// "check passed" line.
+// `issues` holds problems only - it is what gets counted, so anything positive
+// here would penalise a good resume. `note` is where a passing check says why.
 const AnchoredCheck = z.object({
   status: CheckStatus,
   note: z.string().nullable(),
@@ -60,10 +49,8 @@ const DocumentCheck = z.object({
   issues: z.array(DocumentIssue),
 });
 
-// `parseability` here means damage visible in the extracted text - encoding
-// artefacts, interleaved columns, broken structure. Layout-level ATS risks that
-// only exist in the PDF object are measured separately in the analyzer, and both
-// feed the same score category.
+// `parseability` means damage visible in the extracted text. Layout risks that
+// only exist in the PDF object are measured separately in the analyzer.
 const AtsSchema = z.object({
   parseability: AnchoredCheck,
   structure: DocumentCheck,
@@ -131,9 +118,8 @@ export const LinksSchema = z.object({
   other: z.array(z.object({ label: z.string(), url: z.string() })),
 });
 
-// The prompt's DOCUMENT VALIDATION step needs somewhere to put a rejection.
-// `confidence` is the one number the model may emit - it describes the model's
-// own certainty about the document type, not a quality score.
+// `confidence` is the one number the model may emit: certainty about the
+// document type, not a quality score.
 export const DocumentSchema = z.object({
   isResume: z.boolean(),
   detectedType: z.enum([

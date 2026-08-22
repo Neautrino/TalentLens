@@ -1,12 +1,85 @@
-import { 
-  BUZZWORDS, 
-  FILLER_WORDS, 
-  METRIC_PATTERNS, 
-  PRONOUNS, 
-  WEAK_STARTERS, 
+import {
+  CASE_SENSITIVE_PRONOUNS,
+  CLICHE_PHRASES,
+  CLICHE_REPLACEMENTS,
+  CLICHE_TERMS,
+  CONTEXT_DEPENDENT,
+  FILLER_WORDS,
+  METRIC_PATTERNS,
+  PRONOUNS,
+  PRONOUN_DECLARATION,
+  WEAK_STARTERS,
   SECTION_ALIASES
-} from "./rules";
+} from "../data";
 import { extractBulletPoints, extractContactInfo } from "./parserUtils";
+
+// No single factor may zero a category on its own.
+const MAX_PENALTY_PER_FACTOR = 3;
+const capped = (value: number) => Math.min(value, MAX_PENALTY_PER_FACTOR);
+
+// Prefers concrete replacement words over prose guidance. Checks both sources
+// because only 14 of the 20 replacement keys are tier-1 terms.
+const REPLACE_WITH = new Map(
+  [...CLICHE_PHRASES, ...CONTEXT_DEPENDENT]
+    .filter(b => b.replaceWith)
+    .map(b => [b.term, b.replaceWith as string])
+);
+
+function suggestionFor(term: string): string {
+  const words = CLICHE_REPLACEMENTS[term];
+  if (words?.length) return `Try: ${words.slice(0, 4).join(", ")}.`;
+  return REPLACE_WITH.get(term) ?? "Replace with a specific, measurable achievement.";
+}
+
+// "I", "us", "he" and "she" are homographs (job levels, region codes,
+// surnames) and each needs its own guard below.
+function findPronouns(text: string): string[] {
+  const cleaned = text.replace(PRONOUN_DECLARATION, " ");
+  const found: string[] = [];
+
+  for (const pronoun of PRONOUNS) {
+    // A dash before it means a job level ("Developer - I at QuantumCona").
+    if (pronoun === "i") {
+      if (/(?<![-\u2013\u2014]\s?)\bI\s+\w/.test(cleaned)) found.push(pronoun);
+      continue;
+    }
+
+    // Lowercase only, and not a region code ("us-east-1").
+    if (pronoun === "us") {
+      if (/\bus\b(?!-)/.test(cleaned)) found.push(pronoun);
+      continue;
+    }
+
+    // Also surnames ("He Zhang"). Narration is followed by a lowercase verb.
+    // No "i" flag - it would make [a-z] match uppercase too.
+    if (pronoun === "he" || pronoun === "she") {
+      const word = pronoun === "he" ? "[Hh]e" : "[Ss]he";
+      if (new RegExp(`\\b${word}\\s+[a-z]`).test(cleaned)) found.push(pronoun);
+      continue;
+    }
+
+    if (new RegExp(`\\b${pronoun}\\b`, "i").test(cleaned)) found.push(pronoun);
+  }
+
+  return found;
+}
+
+// Longest match first, so "proven track record" is not also charged as
+// "track record".
+function findCliches(text: string): string[] {
+  const hits: string[] = [];
+  let remaining = text.toLowerCase();
+
+  for (const term of [...CLICHE_TERMS].sort((a, b) => b.length - a.length)) {
+    const regex = new RegExp(`\\b${term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i");
+    if (regex.test(remaining)) {
+      hits.push(term);
+      remaining = remaining.replace(regex, " ");
+    }
+  }
+
+  return hits;
+}
 
 export interface HighlightedIssue {
   type: string;
@@ -18,10 +91,10 @@ export interface HighlightedIssue {
 }
 
 export interface CategoryScores {
-  impact: number;  // out of 10
-  brevity: number; // out of 10
-  style: number;   // out of 10
-  ats: number;     // out of 10
+  impact: number;
+  brevity: number;
+  style: number;
+  ats: number;
 }
 
 export interface AnalysisResult {
@@ -55,31 +128,21 @@ export function analyzeResume(rawText: string): AnalysisResult {
   let lengthIssueCount = 0;
   let repetitionCount = 0;
   
-  // Tracker for action verb repetition
   const verbFrequency: Record<string, number> = {};
+  const openerBullets: Record<string, string[]> = {};
   // ==========================================
   // 1. BULLET POINT ANALYSIS (Impact, Style, Brevity)
   // ==========================================
   for (const bullet of validBullets) {
     const textLower = bullet.text.toLowerCase();
     
-    // Repetition Check: Track the first word of the bullet
+    // Counted here, reported once per word after the loop.
     const firstWord = textLower.split(/\s+/)[0];
     if (firstWord && firstWord.length > 2) {
       verbFrequency[firstWord] = (verbFrequency[firstWord] || 0) + 1;
-      if (verbFrequency[firstWord] === 2) { // Flag on the second offense
-        repetitionCount++;
-        allIssues.push({
-          type: "REPETITION",
-          severity: "MEDIUM",
-          message: "You used this action verb multiple times. Vary your vocabulary.",
-          context: bullet.text,
-          word: firstWord,
-          suggestedFix: "Use a synonym (e.g., 'Engineered', 'Created', 'Deployed')."
-        });
-      }
+      (openerBullets[firstWord] ??= []).push(bullet.text);
     }
-    
+
     // A. Impact Check: Does it have metrics?
     const hasMetric = METRIC_PATTERNS.some(pattern => pattern.test(bullet.text));
     if (hasMetric) {
@@ -95,7 +158,10 @@ export function analyzeResume(rawText: string): AnalysisResult {
     }
 
     // B. Impact Check: Weak Starters
-    const weakStarter = WEAK_STARTERS.find(weak => textLower.startsWith(weak));
+    // Needs a word boundary, or "Madeline" matches "made".
+    const weakStarter = WEAK_STARTERS.find(weak =>
+      new RegExp(`^${weak.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(bullet.text)
+    );
     if (weakStarter) {
       weakStarterCount++;
       allIssues.push({
@@ -109,41 +175,36 @@ export function analyzeResume(rawText: string): AnalysisResult {
     }
 
     // C. Style Check: Personal Pronouns
-    for (const pronoun of PRONOUNS) {
-      const regex = new RegExp(`\\b${pronoun}\\b`, 'i');
-      if (regex.test(textLower)) {
-        pronounCount++;
-        allIssues.push({
-          type: "PERSONAL_PRONOUN",
-          severity: "HIGH",
-          message: "Resumes should never contain personal pronouns.",
-          context: bullet.text,
-          word: pronoun,
-          suggestedFix: "Remove the pronoun and start the sentence directly with an action verb."
-        });
-      }
+    for (const pronoun of findPronouns(bullet.text)) {
+      pronounCount++;
+      allIssues.push({
+        type: "PERSONAL_PRONOUN",
+        severity: "HIGH",
+        message: "Resumes should never contain personal pronouns.",
+        context: bullet.text,
+        word: pronoun,
+        suggestedFix: "Remove the pronoun and start the sentence directly with an action verb."
+      });
     }
 
     // D. Style Check: Buzzwords & Clichés
-    for (const buzz of BUZZWORDS) {
-      const regex = new RegExp(`\\b${buzz}\\b`, 'i');
-      if (regex.test(textLower)) {
-        buzzwordCount++;
-        allIssues.push({
-          type: "BUZZWORD",
-          severity: "MEDIUM",
-          message: "Vague buzzwords add little value and are considered clichés by recruiters.",
-          context: bullet.text,
-          word: buzz,
-          suggestedFix: "Replace with a specific technical skill or measurable achievement."
-        });
-      }
+    for (const buzz of findCliches(bullet.text)) {
+      buzzwordCount++;
+      allIssues.push({
+        type: "BUZZWORD",
+        severity: "MEDIUM",
+        message: "Vague buzzwords add little value and are considered clichés by recruiters.",
+        context: bullet.text,
+        word: buzz,
+        suggestedFix: suggestionFor(buzz)
+      });
     }
 
     // E. Brevity Check: Filler Words
     for (const filler of FILLER_WORDS) {
-      const regex = new RegExp(`\\b${filler}\\b`, 'i');
-      if (regex.test(textLower)) {
+      // Case-sensitive: capitalised means proper noun ("Very Large Scale...").
+      const regex = new RegExp(`\\b${filler}\\b`);
+      if (regex.test(bullet.text)) {
         fillerWordCount++;
         allIssues.push({
           type: "FILLER_WORD",
@@ -157,15 +218,8 @@ export function analyzeResume(rawText: string): AnalysisResult {
     }
 
     // F. Brevity Check: Length
-    if (bullet.wordCount < 5) {
-      lengthIssueCount++;
-      allIssues.push({
-        type: "BULLET_TOO_SHORT",
-        severity: "LOW",
-        message: "Bullet point is too short to provide meaningful context.",
-        context: bullet.text
-      });
-    } else if (bullet.wordCount > 35) {
+    // No BULLET_TOO_SHORT: validBullets already filters wordCount >= 6.
+    if (bullet.wordCount > 35) {
       lengthIssueCount++;
       allIssues.push({
         type: "BULLET_TOO_LONG",
@@ -178,14 +232,58 @@ export function analyzeResume(rawText: string): AnalysisResult {
   }
 
   // ==========================================
+  // 1b. OPENER REPETITION
+  // ==========================================
+  // Three repeats across 30 bullets is normal; three across 5 is not.
+  const REPETITION_THRESHOLD = Math.max(2, Math.ceil(validBullets.length * 0.15));
+
+  for (const [word, count] of Object.entries(verbFrequency)) {
+    if (count <= REPETITION_THRESHOLD) continue;
+    repetitionCount++;
+    const occurrences = openerBullets[word] ?? [];
+    allIssues.push({
+      type: "REPETITION",
+      severity: "MEDIUM",
+      message: `"${word}" opens ${count} bullets. Repeating one verb makes achievements blur together.`,
+      context: occurrences[0] ?? "Resume Body",
+      word,
+      suggestedFix: "Vary the opening verb so each bullet leads with a different skill."
+    });
+  }
+
+  // ==========================================
   // 2. ATS & STRUCTURE ANALYSIS
   // ==========================================
   let atsPenalty = 0;
   
-  // Smarter section detection using aliases
-  const checkSection = (aliases: string[]) => {
-    return aliases.some(alias => lowerText.includes(alias.toLowerCase()));
-  };
+  // A section title takes up its own line. Matching a substring across the whole
+  // document meant "Experienced in Python" satisfied the Experience section.
+  const sectionTitles = rawText
+    .split(/\r?\n/)
+    .map(line =>
+      line
+        .replace(/^[\s\u2022\u2023\u25E6\u2043\u2219*\u25AA#>-]+/, "")
+        // Templates often put a date range on the heading line.
+        .replace(/\s{2,}[\d(].*$/, "")
+        .replace(/[:\u2022|_-]+$/, "")
+        .trim()
+    )
+    .filter(line => {
+      if (!line || line.length > 40) return false;
+      const words = line.split(/\s+/);
+      if (words.length > 4) return false;
+      if (/[.!?,;]$/.test(line)) return false;
+      if (!/^[A-Za-z][A-Za-z &/'-]*$/.test(line)) return false;
+      const isAllCaps = line === line.toUpperCase();
+      const isTitleCase = words.every(w => /^[A-Z]/.test(w) || w.length <= 3);
+      // A bare lowercase heading ("experience") still counts.
+      const isBareKeyword = words.length <= 2;
+      return isAllCaps || isTitleCase || isBareKeyword;
+    })
+    .map(line => line.toLowerCase());
+
+  const checkSection = (aliases: string[]) =>
+    sectionTitles.some(title => aliases.some(alias => title.includes(alias.toLowerCase())));
 
   if (!checkSection(SECTION_ALIASES?.experience || [])) {
     atsPenalty += 4;
@@ -226,31 +324,33 @@ export function analyzeResume(rawText: string): AnalysisResult {
     });
   }
   // ==========================================
-  // 3. SCORING MATH (Calculated out of 10)
+  // 3. SCORING (out of 10 per category)
   // ==========================================
+  // Penalty terms are capped so no single factor can zero a category. Uncapped,
+  // three weak openers floored Impact regardless of the rest of the resume.
   const totalBullets = validBullets.length || 1; // prevent divide by zero
-  
-  // Impact: "Medium" Earning Model. Give a base score of 3, then scale up.
-  // e.g., If 8 out of 22 bullets are quantified (36%), impact is 3 + (0.36 * 10) = 6.6
+
   let impactScore = 3.0 + ((quantifiedBulletsCount / totalBullets) * 10);
-  impactScore -= (weakStarterCount * 1.0); // Penalty for weak starters
-  
-  // Style: Medium Deduction Model
-  let styleScore = 10 - (pronounCount * 2) - (buzzwordCount * 0.5) - (repetitionCount * 1.0);
-  
-  // Brevity: Medium Deduction Model
-  let brevityScore = 10 - (lengthIssueCount * 0.5) - (fillerWordCount * 0.25);
-  
-  // ATS: Base 10 minus missing core sections and missing contacts
+  impactScore -= capped(weakStarterCount * 1.0);
+
+  let styleScore = 10
+    - capped(pronounCount * 2)
+    - capped(buzzwordCount * 0.5)
+    - capped(repetitionCount * 1.0);
+
+  let brevityScore = 10
+    - capped(lengthIssueCount * 0.5)
+    - capped(fillerWordCount * 0.25);
+
   let atsScore = 10 - atsPenalty;
 
-  // Clamp all scores between 0 and 10
-  impactScore = Math.max(0, Math.min(10, Number(impactScore.toFixed(1))));
-  styleScore = Math.max(0, Math.min(10, Number(styleScore.toFixed(1))));
-  brevityScore = Math.max(0, Math.min(10, Number(brevityScore.toFixed(1))));
-  atsScore = Math.max(0, Math.min(10, Number(atsScore.toFixed(1))));
+  const clamp = (n: number) => Math.max(0, Math.min(10, Number(n.toFixed(1))));
+  impactScore = clamp(impactScore);
+  styleScore = clamp(styleScore);
+  brevityScore = clamp(brevityScore);
+  atsScore = clamp(atsScore);
 
-  // Overall Score (Weighted: Impact 40%, Style 25%, ATS 20%, Brevity 15%)
+  // Weighted: Impact 40%, Style 25%, ATS 20%, Brevity 15%.
   const overallScore = Math.round(
     (impactScore * 4) + (styleScore * 2.5) + (atsScore * 2) + (brevityScore * 1.5)
   );

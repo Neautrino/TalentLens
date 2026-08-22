@@ -5,13 +5,8 @@ export interface ParsedResumeResult {
     rawText: string
     pageCount: number | null
     pages: string[]
-    /**
-     * Real hyperlink targets embedded in the document. Extracted text carries
-     * only the visible label, so a resume showing "Portfolio" or
-     * "linkedin.com/in/x" hides the actual href. These are the true
-     * destinations - the enrichment pipeline needs them and the model should
-     * never have to guess them.
-     */
+    // Real link targets. Extracted text carries only the visible label, so a
+    // resume showing "Portfolio" hides the actual href.
     hyperlinks: Array<{ text: string; url: string }>
     metadata?: {
         name?: string | null
@@ -35,8 +30,8 @@ export async function extractTextFromBuffer(buffer:Buffer, fileType: string): Pr
         const parser = new PDFParse(uint8Array)
         const pdfData = await parser.getText()
 
-        // Link annotations live outside the text layer, so they need a second
-        // pass. A failure here must not lose the text we already have.
+        // Link annotations live outside the text layer. A failure here must
+        // not lose the text we already have.
         let hyperlinks: Array<{ text: string; url: string }> = []
         try {
             const info = await parser.getInfo({ parsePageInfo: true })

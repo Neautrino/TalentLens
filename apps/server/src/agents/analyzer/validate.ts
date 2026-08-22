@@ -1,12 +1,8 @@
 import type { Analysis } from "./schema";
 
-// PDF text arrives with irregular whitespace, so an exact indexOf on the raw
-// string would reject quotes that are really there. Compare on a normalised copy.
-//
-// Models also sometimes write an escape sequence literally - the two characters
-// backslash-n rather than a newline - when quoting across a line break. Those
-// are folded to whitespace here so a genuine quote is not thrown away over an
-// encoding detail.
+// PDF text has irregular whitespace, and models sometimes write a literal
+// backslash-n when quoting across a line break. Both are folded here so a real
+// quote is not thrown away over an encoding detail.
 function normalise(text: string): string {
   return text
     .replace(/\\[nrt]/g, " ")
@@ -21,13 +17,9 @@ export interface ValidationReport {
 }
 
 /**
- * Removes issues whose `quote` does not appear in the resume.
- *
- * A model can describe a problem convincingly and still quote text that was
- * never written - or put a description where a quote belongs. Those issues
- * render as cards pointing at nothing and the highlighter silently marks empty
- * space, so they are dropped here rather than shown. This is the check an LLM
- * judge cannot do reliably and code can do exactly.
+ * Drops issues whose `quote` is not in the resume. A model can describe a
+ * problem convincingly and still quote text that was never written; those
+ * render as cards pointing at nothing.
  */
 export function validateAnalysis(analysis: Analysis, rawText: string): ValidationReport {
   const haystack = normalise(rawText);
@@ -48,9 +40,7 @@ export function validateAnalysis(analysis: Analysis, rawText: string): Validatio
         // Document-level issues have no quote and are always kept.
         if (typeof quote !== "string") return true;
 
-        // The schema cannot require a non-empty quote - OpenAI strict output
-        // rejects minLength - so an anchored issue with nothing to anchor to is
-        // caught here.
+        // The schema cannot require non-empty (strict output rejects minLength).
         const needle = normalise(quote);
         if (needle.length === 0) {
           droppedQuotes.push({ path: `${category}.${checkName}`, quote });

@@ -1,13 +1,4 @@
-/**
- * LLM configuration.
- *
- * This is the file you edit to change provider or model. API keys stay in
- * .env - they must never be committed - but everything about which provider
- * and which model is used lives here in code.
- *
- * To switch provider: change ACTIVE_PROVIDER below.
- * To switch model:    edit the models block of that provider.
- */
+// Edit this file to change provider or model. API keys stay in .env.
 
 export type ProviderName = "openai" | "opencode" | "openrouter" | "groq" | "local";
 
@@ -15,12 +6,11 @@ export type ProviderName = "openai" | "opencode" | "openrouter" | "groq" | "loca
 export type AgentName = "analyzer";
 
 export interface ProviderConfig {
-  /** Leave undefined for OpenAI itself. Any other value is treated as an
-   *  OpenAI-compatible endpoint and switches the SDK to chat completions. */
+  // Undefined for OpenAI itself; any other value switches to chat completions.
   baseURL?: string;
-  /** Which .env variable holds this provider's key. */
+  // Which .env variable holds this provider's key.
   apiKeyEnv: string;
-  /** Model id per agent. Ids differ between providers - gateways prefix them. */
+  // Model ids differ between providers - gateways prefix them.
   models: Record<AgentName, string>;
 }
 
@@ -77,12 +67,8 @@ export const PROVIDERS: Record<ProviderName, ProviderConfig> = {
 
 export const activeProvider: ProviderConfig = PROVIDERS[ACTIVE_PROVIDER];
 
-/**
- * Model id for an agent under the active provider.
- *
- * An env var of the same name (ANALYZER_MODEL) overrides it, so a one-off
- * comparison run does not need a code edit. The config above is the default.
- */
+// An env var of the same name (ANALYZER_MODEL) overrides this, for one-off
+// comparison runs without a code edit.
 export function modelFor(agent: AgentName): string {
   const override = process.env[`${agent.toUpperCase()}_MODEL`];
   return override || activeProvider.models[agent];
